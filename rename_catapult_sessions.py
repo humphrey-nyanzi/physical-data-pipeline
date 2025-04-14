@@ -6,7 +6,7 @@ import logging
 
 # Configure logging to write to a log file on the Desktop
 logging.basicConfig(
-    filename=os.path.expanduser("~\\Desktop\\rename_script.log"),
+    filename=os.path.expanduser("~\\OneDrive\\Desktop\\FUFA\\Logs\\rename_script.log"),
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
@@ -32,12 +32,53 @@ def generate_unique_filename(directory, filename):
         counter += 1
     return new_filename
 
+def match_team(candidate,team_list):
+    """
+    Given a candidate team name(from the session title) and a list of official team names,
+    try to find a match using several fallback strategies:
+    1. Exact match
+    2.Check if the candidate is a substring of any team name
+    3.Compare the first two words
+    4. Compare the first word
+    returns the matched team name(as stored in the official list) or None if no match is found
+    """
+    candidate = candidate.upper().strip()
+
+    #1. Exact match
+    for team in team_list:
+        if candidate == team.upper():
+            return team.upper()
+        
+    #2. substring match
+    for team in team_list:
+        if candidate in team.upper():
+            return team.upper()
+        
+    #3. First two words match(if candidate has two or more words)
+    candidate_words=candidate.split()
+    if len(candidate_words) >= 2:
+        candidate_prefix = ''.join(candidate_words[:2])
+        for team in team_list:
+            team_words=team.upper().split()
+            if len(team_words) >=2 and candidate_prefix == ''.join(team_words[:2]):
+                return team.upper()
+            
+    #First word match as last resort
+    if candidate_words:
+        candidate_first=candidate_words[0]
+        for team in team_list:
+            if candidate_first in team.upper():
+                return team.upper()
+            
+    return None
+
+
 # Define the Downloads folder path and the Desktop folder path
 downloads_folder = os.path.expanduser("~\\Downloads")
-desktop_folder = os.path.expanduser("~\\Desktop")
+fufa_folder = os.path.expanduser("~\\OneDrive\\Desktop\\FUFA")
 
 # Define the parent folder for league matches on the desktop
-league_matches_folder = os.path.join(desktop_folder, "League Matches")
+league_matches_folder = os.path.join(fufa_folder, "League Matches")
 if not os.path.exists(league_matches_folder):
     os.makedirs(league_matches_folder)
     logging.info(f"Created folder: {league_matches_folder}")
@@ -85,10 +126,16 @@ for file_path in files:
             if len(session_parts) > 1:
                 # Extract the second part and take only the whole word 
                 team_candidate = session_parts[1].strip()
-                team_name = ' '.join(team_candidate.split()[0:])
+                #use match team function with official team lists
+                matched_team=match_team(team_candidate,list(upl_teams)+list(wsl_teams))
+                if matched_team is not None:
+                    team_name = matched_team
+                else:
+                    team_name = "UNKNOWN"
+                    logging.warning(f"Could not match team for team: {team_candidate}")
             else:
-                team_name = "UNKNOWN"
-                logging.warning(f"Could not extract team name from session title: {session_name_title}")
+                team_name='UNKONWN'
+                logging.warning(f'Session title did not have expected hyphen format: {session_name_title}')
             
             # Convert team lists to UPPER case for comparison
             upl_teams_upper = [x.upper() for x in upl_teams]
@@ -125,7 +172,7 @@ for file_path in files:
             
             final_file_path = os.path.join(team_folder_path, new_file_name)
             os.rename(temp_new_file_path, final_file_path)
-            logging.info(f"Moved file to '{final_file_path}'")
+            logging.info(f"Moved file to '{final_file_path}'\n")
         else:
             logging.error(f"Column 'Session Title' not found in {file_path}")
     except Exception as e:
