@@ -5,14 +5,14 @@ import logging
 
 # Configure logging
 logging.basicConfig(
-    filename=os.path.expanduser("~\\OneDrive\\Desktop\\FUFA\\Logs\\merge_script.log"),
+    filename=os.path.expanduser("~\\Desktop\\FUFA\\Logs\\merge_script.log"),
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
 # Define the main League Matches folder and its subfolders
-desktop_folder = os.path.expanduser("~\\OneDrive\\Desktop\\FUFA")
+desktop_folder = os.path.expanduser("~\\Desktop\\FUFA")
 league_matches_folder = os.path.join(desktop_folder, "League Matches")
 league_categories = ["WSL", "UPL"]  # Women's Super League & Uganda Premier League
 

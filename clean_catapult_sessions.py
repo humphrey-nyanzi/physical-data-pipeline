@@ -7,7 +7,7 @@ import datetime
 
 # Configure logging
 logging.basicConfig(
-    filename=os.path.expanduser("~\\OneDrive\\Desktop\\FUFA\\Logs\\clean_script.log"),
+    filename=os.path.expanduser("~\\Desktop\\FUFA\\Logs\\clean_script.log"),
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
@@ -148,7 +148,7 @@ def generate_teamwise_cleaning_report(df, team_name):
     return "\n".join(report_lines)
 
 # === Set up directories ===
-desktop_folder = os.path.expanduser("~\\OneDrive\\Desktop\\FUFA")
+desktop_folder = os.path.expanduser("~\\Desktop\\FUFA")
 league_matches_folder = os.path.join(desktop_folder, "League Matches")
 report_folder = os.path.join(desktop_folder, "Logs")
 if not os.path.exists(report_folder):
