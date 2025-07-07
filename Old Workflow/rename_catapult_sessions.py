@@ -6,7 +6,7 @@ import logging
 
 # Configure logging to write to a log file on the Desktop
 logging.basicConfig(
-    filename=os.path.expanduser("~\\OneDrive\\Desktop\\FUFA\\Logs\\rename_script.log"),
+    filename=os.path.expanduser("~\\Desktop\\FUFA\\Logs\\rename_script.log"),
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
@@ -75,7 +75,7 @@ def match_team(candidate,team_list):
 
 # Define the Downloads folder path and the Desktop folder path
 downloads_folder = os.path.expanduser("~\\Downloads")
-fufa_folder = os.path.expanduser("~\\OneDrive\\Desktop\\FUFA")
+fufa_folder = os.path.expanduser("~\\Desktop\\FUFA")
 
 # Define the parent folder for league matches on the desktop
 league_matches_folder = os.path.join(fufa_folder, "League Matches")

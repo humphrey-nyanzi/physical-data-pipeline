@@ -7,7 +7,7 @@ import datetime
 
 # Configure logging
 logging.basicConfig(
-    filename=os.path.expanduser("~\\OneDrive\\Desktop\\FUFA\\Logs\\clean_script.log"),
+    filename=os.path.expanduser("~\\Desktop\\FUFA\\Logs\\clean_script.log"),
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
@@ -72,13 +72,7 @@ def clean_file(file_path, output_folder, team_identifier):
     if 'player_position' in df.columns:
         df['player_position'] = df['player_position'].str.replace('amc', 'am')
     if 'match_day' in df.columns:
-        # Remove 'wmd' first, then 'md'
-        df['match_day'] = df['match_day'].str.replace('wmd', '', regex=False)
-        df['match_day'] = df['match_day'].str.replace('md', '', regex=False)
-        # Convert to numeric, set errors='coerce' to NaN for invalid values
-        df['match_day'] = pd.to_numeric(df['match_day'], errors='coerce').astype('Int64')
-        if df['match_day'].isnull().any():
-            logging.warning('Some match_day values could not be converted to int and are set as NaN.')
+        df['match_day'] = df['match_day'].str.replace('md', '').astype(int)
     if 'duration' in df.columns:
         df['duration'] = round(df['duration'] // 60, 2)
 
@@ -94,7 +88,7 @@ def clean_file(file_path, output_folder, team_identifier):
             'gk': 'goalkeeper', 'df': 'defender', 'mf': 'midfielder', 'am': 'midfielder',
             'fw': 'forward', 'rb': 'defender', 'cb': 'defender', 'lb': 'defender',
             'rw': 'forward', 'lw': 'forward', 'cm': 'midfielder', 'dm': 'midfielder',
-            'cd':'defender','fwd':'forward','dmc':'midfielder'
+            'cd':'defender','fwd':'forward'
         })
 
     if 'date' in df.columns:
@@ -154,7 +148,7 @@ def generate_teamwise_cleaning_report(df, team_name):
     return "\n".join(report_lines)
 
 # === Set up directories ===
-desktop_folder = os.path.expanduser("~\\OneDrive\\Desktop\\FUFA")
+desktop_folder = os.path.expanduser("~\\Desktop\\FUFA")
 league_matches_folder = os.path.join(desktop_folder, "League Matches")
 report_folder = os.path.join(desktop_folder, "Logs")
 if not os.path.exists(report_folder):
