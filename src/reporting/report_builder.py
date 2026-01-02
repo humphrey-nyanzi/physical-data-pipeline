@@ -1,0 +1,458 @@
+"""
+Report Builder Module for Club-Level Performance Reports
+
+Consolidates data aggregation and metric computation logic for generating
+comprehensive club-level Catapult performance reports. Abstracts away from
+document generation to enable reusable data preparation for multiple output formats.
+
+Functions are league-agnostic and parameterized by league identifier.
+All constants and configuration sourced from src/config modules.
+
+Author: FUFA Research, Science & Technology Unit
+Version: 1.0
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Tuple, Dict, List, Optional
+
+
+def get_matchday_stats(
+    club_df: pd.DataFrame, matchday_order: List[str]
+) -> pd.DataFrame:
+    """
+    Aggregate per-matchday statistics for a club.
+
+    Computes: opponent, players monitored, average duration, match result, location.
+    Ensures all matchdays are present (fills missing with NaN/0).
+
+    Args:
+        club_df: Filtered club data
+        matchday_order: Ordered list of matchday identifiers (e.g., ['Md1', 'Md2', ...])
+
+    Returns:
+        DataFrame with columns: Match Day, Opponent Club, Number of Players Monitored,
+                                Average Session Duration (min), Match Result, Match Location
+    """
+    match_stats = (
+        club_df.groupby("match_day", as_index=False)
+        .agg(
+            {
+                "club_against": "first",
+                "p_name": "nunique",
+                "duration": "mean",
+                "result": "first",
+                "location": "first",
+            }
+        )
+        .rename(
+            columns={
+                "club_against": "Opponent Club",
+                "match_day": "Match Day",
+                "p_name": "Number of Players Monitored",
+                "duration": "Average Session Duration (min)",
+                "result": "Match Result",
+                "location": "Match Location",
+            }
+        )
+    )
+
+    # Ensure all matchdays are present
+    full_md_df = pd.DataFrame({"Match Day": matchday_order})
+    match_stats = full_md_df.merge(match_stats, on="Match Day", how="left")
+
+    # Fill text columns with NaN, numeric columns with 0
+    text_cols = ["Opponent Club", "Match Result", "Match Location"]
+    num_cols = ["Number of Players Monitored", "Average Session Duration (min)"]
+
+    for col in text_cols:
+        match_stats[col] = match_stats[col].where(match_stats[col].notna(), np.nan)
+    for col in num_cols:
+        match_stats[col] = match_stats[col].fillna(0)
+
+    # Round duration
+    match_stats["Average Session Duration (min)"] = match_stats[
+        "Average Session Duration (min)"
+    ].round(1)
+
+    return match_stats
+
+
+def get_players_monitored_stats(club_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aggregate per-player statistics for a club.
+
+    Computes: player position (first occurrence) and count of unique matchdays played.
+
+    Args:
+        club_df: Filtered club data
+
+    Returns:
+        DataFrame with columns: Player Name, Position, Match Days Analysed
+    """
+    player_stats = (
+        club_df.groupby("p_name", as_index=False)
+        .agg({"general_position": "first", "match_day": pd.Series.nunique})
+        .rename(columns={"match_day": "Match Days Analysed"})
+    )
+
+    # Title-case player names and sort
+    player_stats["p_name"] = player_stats["p_name"].str.title()
+    player_stats = player_stats.sort_values("p_name")
+
+    # Rename columns for display
+    player_stats = player_stats.rename(
+        columns={"p_name": "Player Name", "general_position": "Position"}
+    )
+
+    return player_stats
+
+
+def get_metric_summary(
+    club_df: pd.DataFrame,
+    volume_metrics: List[str],
+    intensity_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> pd.DataFrame:
+    """
+    Aggregate overall metrics (Total, Max, Min, Mean, Std Dev, Range).
+
+    Computes summary statistics across all sessions for volume and intensity metrics.
+
+    Args:
+        club_df: Filtered club data
+        volume_metrics: List of volume metric column names
+        intensity_metrics: List of intensity metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame with columns: Metric, Total, Max, Min, Mean, Std Dev, Range
+    """
+    all_metrics = volume_metrics + intensity_metrics
+
+    summary = club_df[all_metrics].agg(["sum", "max", "min", "mean", "std"])
+    summary = summary.rename(columns=metric_display_names)
+    summary = summary.T.reset_index().rename(columns={"index": "Metric"})
+    summary = summary.rename(
+        columns={
+            "sum": "Total",
+            "max": "Max",
+            "min": "Min",
+            "mean": "Mean",
+            "std": "Std Dev",
+        }
+    )
+
+    summary = summary[["Metric", "Total", "Max", "Min", "Mean", "Std Dev"]]
+    summary["Range"] = summary["Max"] - summary["Min"]
+
+    return summary.round(2)
+
+
+def get_top_players_by_metric(
+    club_df: pd.DataFrame, metrics: List[str], metric_display_names: Dict[str, str]
+) -> pd.DataFrame:
+    """
+    Extract top player performance for each metric.
+
+    For each metric, identifies the player with maximum value and their matchday.
+
+    Args:
+        club_df: Filtered club data
+        metrics: List of metric column names to evaluate
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame with top player value per metric (columns as metrics, row as player info)
+    """
+    top_players = []
+
+    for metric in metrics:
+        idx = club_df[metric].idxmax()
+        row = club_df.loc[idx]
+        top_players.append(
+            {
+                "metric": metric,
+                "player": row["p_name"].title(),
+                "value": row[metric],
+                "match_day": row["match_day"],
+            }
+        )
+
+    top_players_df = pd.DataFrame(top_players)
+    top_players_df = top_players_df.set_index("metric").T
+    top_players_df = top_players_df.rename(columns=metric_display_names)
+
+    # Drop acceleration/deceleration max columns if they exist
+    cols_to_drop = [
+        col
+        for col in top_players_df.columns
+        if "Max Acceleration" in col or "Max Deceleration" in col
+    ]
+    top_players_df = top_players_df.drop(columns=cols_to_drop, errors="ignore")
+
+    return top_players_df.round(2)
+
+
+def get_average_metrics_by_position(
+    club_df: pd.DataFrame,
+    volume_metrics: List[str],
+    intensity_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> pd.DataFrame:
+    """
+    Compute average metrics grouped by player position.
+
+    Args:
+        club_df: Filtered club data
+        volume_metrics: List of volume metric column names
+        intensity_metrics: List of intensity metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame with metrics as rows and positions as columns
+    """
+    all_metrics = volume_metrics + intensity_metrics
+
+    avg_by_position = (
+        club_df.groupby("general_position")[all_metrics].mean().round(2).reset_index()
+    )
+
+    avg_by_position = avg_by_position.rename(
+        columns={"general_position": "Position", **metric_display_names}
+    )
+
+    # Drop acceleration/deceleration max columns if they exist
+    cols_to_drop = [
+        col
+        for col in avg_by_position.columns
+        if "Max Acceleration" in col or "Max Deceleration" in col
+    ]
+    avg_by_position = avg_by_position.drop(columns=cols_to_drop, errors="ignore")
+
+    return avg_by_position.T.reset_index().rename(columns={"index": "Position"})
+
+
+def get_average_metrics_per_matchday(
+    club_df: pd.DataFrame,
+    matchday_order: List[str],
+    volume_metrics: List[str],
+    intensity_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Compute average metrics per matchday for trend analysis.
+
+    Returns both display-ready (renamed) and raw (for plotting) versions.
+
+    Args:
+        club_df: Filtered club data
+        matchday_order: Ordered list of matchday identifiers
+        volume_metrics: List of volume metric column names
+        intensity_metrics: List of intensity metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        Tuple of (display_df, plot_df) where:
+            - display_df: Renamed columns, formatted for tables
+            - plot_df: Raw values, matches matchday_order
+    """
+    all_metrics = volume_metrics + intensity_metrics
+
+    avg_per_matchday = club_df.groupby("match_day")[all_metrics].mean().reset_index()
+    avg_per_matchday["match_day"] = pd.Categorical(
+        avg_per_matchday["match_day"], categories=matchday_order, ordered=True
+    )
+    avg_per_matchday = avg_per_matchday.sort_values(by="match_day")
+
+    # Keep raw version for plotting
+    plot_df = avg_per_matchday.copy().round(2)
+
+    # Create display version with renamed columns
+    display_df = avg_per_matchday.rename(
+        columns={"match_day": "Match Day", **metric_display_names}
+    )
+
+    # Drop acceleration/deceleration max columns if they exist
+    cols_to_drop = [
+        col
+        for col in display_df.columns
+        if "Max Acceleration" in col or "Max Deceleration" in col
+    ]
+    display_df = display_df.drop(columns=cols_to_drop, errors="ignore")
+
+    return display_df.round(1), plot_df
+
+
+def club_vs_season_comparison(
+    club_df: pd.DataFrame,
+    season_df: pd.DataFrame,
+    volume_metrics: List[str],
+    intensity_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> pd.DataFrame:
+    """
+    Compare club average metrics against season-wide averages.
+
+    Computes percentage difference for each metric.
+
+    Args:
+        club_df: Filtered club data
+        season_df: Full season data for all clubs
+        volume_metrics: List of volume metric column names
+        intensity_metrics: List of intensity metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame with columns: Metric, Club Average, Season Average, % Difference
+    """
+    all_metrics = volume_metrics + intensity_metrics
+
+    club_avg = club_df[all_metrics].mean().to_frame(name="Club Average")
+    season_avg = season_df[all_metrics].mean().to_frame(name="Season Average")
+
+    comparison = club_avg.join(season_avg)
+    comparison = comparison.round(2).T
+    comparison = comparison.rename(columns=metric_display_names)
+
+    # Drop acceleration/deceleration max columns if they exist
+    cols_to_drop = [
+        col
+        for col in comparison.columns
+        if "Max Acceleration" in col or "Max Deceleration" in col
+    ]
+    comparison = comparison.drop(columns=cols_to_drop, errors="ignore")
+
+    comparison = comparison.T
+    comparison["% Difference"] = (
+        (comparison["Club Average"] - comparison["Season Average"])
+        / comparison["Season Average"]
+        * 100
+    ).round(2)
+
+    return comparison[["Club Average", "Season Average", "% Difference"]]
+
+
+def positional_comparison_vs_season(
+    club_df: pd.DataFrame,
+    season_df: pd.DataFrame,
+    volume_metrics: List[str],
+    intensity_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> pd.DataFrame:
+    """
+    Compare club positional averages against season positional averages.
+
+    For each position and metric, computes club vs season comparison with % difference.
+
+    Args:
+        club_df: Filtered club data
+        season_df: Full season data for all clubs
+        volume_metrics: List of volume metric column names
+        intensity_metrics: List of intensity metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame structured as: Index = Metric, Columns = Positions (Club/Season/% Diff for each)
+    """
+    all_metrics = volume_metrics + intensity_metrics
+
+    club_pos_avg = (
+        club_df.groupby("general_position")[all_metrics].mean().add_prefix("Club_")
+    )
+    season_pos_avg = (
+        season_df.groupby("general_position")[all_metrics].mean().add_prefix("Season_")
+    )
+
+    combined = club_pos_avg.join(season_pos_avg)
+
+    # Calculate percentage differences
+    for metric in all_metrics:
+        club_col = f"Club_{metric}"
+        season_col = f"Season_{metric}"
+        if club_col in combined.columns and season_col in combined.columns:
+            combined[f"PctDiff_{metric}"] = (
+                (combined[club_col] - combined[season_col]) / combined[season_col]
+            ) * 100
+
+    # Reorder columns for display
+    ordered_cols = []
+    for metric in all_metrics:
+        ordered_cols.extend([f"Club_{metric}", f"Season_{metric}", f"PctDiff_{metric}"])
+
+    comparison_by_position = combined[ordered_cols].round(2).T
+    comparison_by_position.reset_index(inplace=True)
+    comparison_by_position.rename(columns={"index": "Metric"}, inplace=True)
+
+    # Apply display name mappings
+    for old_name, new_name in metric_display_names.items():
+        comparison_by_position["Metric"] = comparison_by_position["Metric"].str.replace(
+            f"Club_{old_name}", f"Club {new_name}", regex=False
+        )
+        comparison_by_position["Metric"] = comparison_by_position["Metric"].str.replace(
+            f"Season_{old_name}", f"Season {new_name}", regex=False
+        )
+        comparison_by_position["Metric"] = comparison_by_position["Metric"].str.replace(
+            f"PctDiff_{old_name}", f"% Diff {new_name}", regex=False
+        )
+
+    return comparison_by_position
+
+
+def get_speed_zone_breakdown(
+    club_df: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Aggregate distance by speed zone and position.
+
+    Returns both absolute distances and percentages by position.
+
+    Args:
+        club_df: Filtered club data
+
+    Returns:
+        Tuple of (zone_distances_df, zone_percentages_df)
+    """
+    speed_zone_cols = [
+        "distance_in_speed_zone_1_km",
+        "distance_in_speed_zone_2_km",
+        "distance_in_speed_zone_3_km",
+        "distance_in_speed_zone_4_km",
+        "distance_in_speed_zone_5_km",
+    ]
+
+    # Group by position and sum distances
+    zone_by_position = club_df.groupby("general_position")[speed_zone_cols].sum()
+
+    # Create position labels
+    zone_by_position.index = [f"{pos}s" for pos in zone_by_position.index]
+
+    # Rename columns
+    zone_labels = [f"Zone {i + 1}" for i in range(len(speed_zone_cols))]
+    zone_by_position.columns = zone_labels
+
+    # Convert to percentages
+    zone_pct = zone_by_position.div(zone_by_position.sum(axis=1), axis=0) * 100
+
+    return zone_by_position, zone_pct.round(2)
+
+
+def compute_coverage_summary(
+    club_df: pd.DataFrame, matchday_order: List[str]
+) -> Dict[str, int]:
+    """
+    Compute basic coverage statistics for a club.
+
+    Args:
+        club_df: Filtered club data
+        matchday_order: Ordered list of matchday identifiers
+
+    Returns:
+        Dictionary with coverage metrics
+    """
+    return {
+        "total_matchdays_available": len(matchday_order),
+        "matchdays_with_data": club_df["match_day"].nunique(),
+        "unique_players": club_df["p_name"].nunique(),
+        "total_sessions": len(club_df),
+    }

@@ -1,0 +1,178 @@
+# FUFA Match-Analysis Configuration
+# Configuration file for league-specific settings and analysis parameters
+
+# League Configuration
+leagues:
+  upl:
+    name: "Uganda Premier League"
+    abbreviation: "UPL"
+    clubs: 16
+    max_matchdays: 30
+    min_players_per_match: 5
+    expected_players_per_club: 23
+    data_quality_threshold: 0.85
+
+  fwsl:
+    name: "Football Without Limits"
+    abbreviation: "FWSL"
+    clubs: 14
+    max_matchdays: 22
+    min_players_per_match: 4
+    expected_players_per_club: 20
+    data_quality_threshold: 0.80
+
+# Analysis Parameters
+analysis:
+  # Data filtering
+  min_distance_km: 2.0
+  min_duration_minutes: 10
+
+  # Outlier detection
+  outlier_method: "iqr" # Options: iqr, zscore, isolation_forest
+  outlier_threshold: 1.5
+
+  # Player analysis
+  min_matchdays_for_ranking: 3
+  top_players_count: 10
+
+  # Statistical significance
+  min_sample_size: 5
+  confidence_level: 0.95
+
+# Reporting Configuration
+reporting:
+  # Output formats
+  include_visualizations: true
+  output_format: "docx" # Options: docx, pdf, html
+  include_charts: true
+  include_summary_tables: true
+
+  # Report details
+  include_player_rankings: true
+  include_positional_analysis: true
+  include_trends: true
+  include_recommendations: true
+
+  # Styling
+  use_team_colors: true
+  include_club_logos: false
+  page_orientation: "portrait" # Options: portrait, landscape
+
+# Output Configuration
+output:
+  # Directory structure
+  cleaned_data_dir: "01_cleaned"
+  analysis_results_dir: "02_analysis"
+  reports_dir: "03_reports"
+  exports_dir: "04_exports"
+
+  # File naming
+  include_timestamp: true
+  include_league_name: true
+
+  # Compression
+  compress_archives: false
+  archive_format: "zip" # Options: zip, tar, 7z
+
+# Data Validation
+validation:
+  # Schema checks
+  check_required_columns: true
+  check_data_types: true
+
+  # Quality checks
+  check_missing_values: true
+  max_missing_percentage: 10
+
+  # Consistency checks
+  check_duplicate_records: true
+  check_value_ranges: true
+
+  # Reporting
+  generate_validation_report: true
+  show_quality_score: true
+
+# Export Formats
+export:
+  # Excel export
+  excel:
+    include_summary_sheet: true
+    include_raw_data: true
+    include_charts: true
+    freeze_header_rows: true
+    auto_column_width: true
+
+  # CSV export
+  csv:
+    include_header: true
+    delimiter: ","
+    encoding: "utf-8"
+    include_index: false
+
+  # JSON export
+  json:
+    indent: 2
+    include_metadata: true
+    include_schema: true
+
+  # HTML export
+  html:
+    include_styling: true
+    include_tables: true
+    include_charts: true
+    responsive_design: true
+
+# Batch Processing
+batch:
+  # Parallel execution
+  enable_parallel: true
+  max_workers: 4 # Number of parallel processes
+  chunk_size: 100 # Rows per batch
+
+  # Error handling
+  stop_on_error: false # Continue processing other files on error
+  max_retries: 3
+  retry_delay: 5 # seconds
+
+  # Reporting
+  generate_summary: true
+  include_failed_files: true
+
+# Logging Configuration
+logging:
+  level: "INFO" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  include_file_logging: true
+  log_directory: "logs"
+
+  # Log rotation
+  max_log_size_mb: 10
+  backup_count: 5
+
+# Performance
+performance:
+  # Memory optimization
+  enable_chunking: true
+  chunk_size_mb: 100
+
+  # Caching
+  enable_caching: true
+  cache_directory: ".cache"
+
+  # Timing
+  show_execution_time: true
+  profile_execution: false # Enable for detailed profiling
+
+# Advanced Options
+advanced:
+  # Development
+  debug_mode: false
+  save_intermediate_results: false
+
+  # Features
+  enable_gpu_acceleration: false
+  enable_compression: false
+
+  # Customization
+  custom_filters_enabled: false
+  allow_extensions: true
