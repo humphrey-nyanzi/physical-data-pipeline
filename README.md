@@ -659,7 +659,7 @@ df_recent = df[df['match_date'] >= '2025-01-01']  # Filter by date
 
 **Data Source:** Catapult Sports tracking data  
 **Leagues:** FWSL (Uganda Women's Football Super League), UPL (Uganda Premier League)  
-**Organization:** FUFA-RST (Federation of Uganda Football Associations - Research & Statistics Team)
+**Organization:** FUFA-RST (Federation of Uganda Football Associations - Research, Science and Technology Team)
 
 ---
 
