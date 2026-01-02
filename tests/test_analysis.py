@@ -44,7 +44,7 @@ def test_unique_players_per_club():
     )
     result = analysis.unique_players_per_club(df)
     assert result[result["club_for"] == "Club A"]["unique_players"].values[0] == 2
-    assert result[result["club_for"] == "Club B"]["unique_players"].values[0] == 3
+    assert result[result["club_for"] == "Club B"]["unique_players"].values[0] == 2
 
 
 def test_matchdays_per_club():

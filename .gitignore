@@ -43,14 +43,14 @@ wheels/
 *.ipynb_checkpoints
 
 # Data (only track structure, not actual data)
-# data/raw/*.csv
-# data/processed/*.csv
+data/raw/*.csv
+data/processed/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
 # Reports & Outputs
-# reports/**/*.docx
-# reports/**/*.xlsx
+reports/**/*.docx
+reports/**/*.xlsx
 outputs/
 logs/*.log
 
