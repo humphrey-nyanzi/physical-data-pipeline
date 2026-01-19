@@ -213,8 +213,10 @@ def get_speed_zone_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
     stats = {}
     
-    if 'general_position' not in df.columns:
+    if 'general_position' in df.columns:
         df['general_position'] = df['general_position'].fillna('Unknown')
+    else:
+        df['general_position'] = df.get('player_position', 'Unknown')
 
     # Distance
     valid_dist = [c for c in SPEED_ZONE_DIST_COLS if c in df.columns]
