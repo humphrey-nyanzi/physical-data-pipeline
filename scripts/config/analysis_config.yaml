@@ -13,9 +13,9 @@ leagues:
     data_quality_threshold: 0.85
 
   fwsl:
-    name: "Football Without Limits"
+    name: "Finance Trust Women Super League"
     abbreviation: "FWSL"
-    clubs: 14
+    clubs: 12
     max_matchdays: 22
     min_players_per_match: 4
     expected_players_per_club: 20
@@ -57,6 +57,20 @@ reporting:
   use_team_colors: true
   include_club_logos: false
   page_orientation: "portrait" # Options: portrait, landscape
+
+# Season Report Configuration
+season_report:
+  half_season_matchday:
+    upl: 15
+    fwsl: 11
+  
+  visualization:
+    theme: "professional" # Options: default, professional
+    font_family: "sans-serif"
+    primary_color: "#1f77b4"
+    secondary_color: "#ff7f0e"
+    background_color: "#ffffff"
+    grid_alpha: 0.3
 
 # Output Configuration
 output:

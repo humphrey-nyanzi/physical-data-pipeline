@@ -1,6 +1,6 @@
 # Match-Analysis: Uganda Football Data Analytics Platform
 
-A comprehensive data analysis and reporting platform for Catapult match data from Uganda's football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific analysis reports.
+A comprehensive data analysis and reporting platform for Catapult match data from Uganda's top flight football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific analysis reports.
 
 ## 🎯 Quick Start
 
@@ -70,7 +70,7 @@ Match-Analysis processes raw Catapult sports tracking data and transforms it int
 
 | League | Full Name | Teams | Season |
 |--------|-----------|-------|--------|
-| **FWSL** | Uganda Women's Football Super League | 12 | 2024-2025 |
+| **FWSL** | FUFA Women's Football Super League | 12 | 2024-2025 |
 | **UPL** | Uganda Premier League (Men) | 16 | 2024-2025 |
 
 ---

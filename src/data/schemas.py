@@ -12,7 +12,9 @@ RAW_DATA_COLUMNS = {
     "session_title": {"dtype": "str", "required": True},
     "player_name": {"dtype": "str", "required": True},
     "position": {"dtype": "str", "required": False},
-    "duration_minutes": {"dtype": "float", "required": False},
+    # Catapult raw exports commonly store duration in seconds under `duration`.
+    # The cleaning pipeline normalizes this to minutes.
+    "duration": {"dtype": "float", "required": False},
     "total_distance_km": {"dtype": "float", "required": False},
     "high_speed_distance_km": {"dtype": "float", "required": False},
     "sprint_distance_km": {"dtype": "float", "required": False},

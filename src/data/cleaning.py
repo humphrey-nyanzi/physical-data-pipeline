@@ -35,6 +35,61 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def normalize_duration_to_minutes(
+    df: pd.DataFrame,
+    duration_col: str = "duration",
+    raw_unit: str = "seconds",
+    keep_raw_seconds: bool = True,
+    heuristic_if_unknown: bool = True,
+) -> pd.DataFrame:
+    """Normalize duration values to minutes.
+
+    The Catapult raw exports often store `duration` in **seconds**, while the rest of
+    this codebase assumes processed data uses **minutes**.
+
+    Strategy:
+    - If `raw_unit` is "seconds": convert to minutes.
+    - If `raw_unit` is "minutes": leave as-is.
+    - If `raw_unit` is "auto"/unknown and `heuristic_if_unknown` is True:
+      infer seconds vs minutes using typical match duration ranges.
+
+    If `keep_raw_seconds` is True and conversion occurs, the original values are
+    preserved in `duration_seconds_raw`.
+    """
+
+    df = df.copy()
+    if duration_col not in df.columns:
+        return df
+
+    # Ensure numeric
+    duration = pd.to_numeric(df[duration_col], errors="coerce")
+
+    unit = (raw_unit or "auto").strip().lower()
+
+    # Heuristic: if durations look too large for minutes, assume seconds.
+    # Typical match sessions are < 240 minutes; if median is > 300, it's almost
+    # certainly seconds.
+    if unit in {"auto", "unknown", ""} and heuristic_if_unknown:
+        med = duration.dropna().median() if duration.notna().any() else np.nan
+        mx = duration.dropna().max() if duration.notna().any() else np.nan
+        if (pd.notna(med) and med > 300) or (pd.notna(mx) and mx > 240):
+            unit = "seconds"
+        else:
+            unit = "minutes"
+
+    if unit == "seconds":
+        if keep_raw_seconds and "duration_seconds_raw" not in df.columns:
+            df["duration_seconds_raw"] = duration
+        df[duration_col] = duration / 60.0
+    elif unit == "minutes":
+        df[duration_col] = duration
+    else:
+        # Unknown unit; keep numeric but do not transform.
+        df[duration_col] = duration
+
+    return df
+
+
 def filter_match_sessions(df: pd.DataFrame, league: str) -> pd.DataFrame:
     """Keep only rows that look like match sessions for the given league.
 
@@ -244,12 +299,25 @@ def clean_pipeline(
     """Run the full cleaning pipeline for a given league.
 
     Returns the cleaned dataframe and the path where it was saved.
+
+    Notes:
+        - The raw Catapult export stores `duration` in seconds.
+        - This pipeline standardizes processed outputs to `duration` in minutes.
     """
     # Load
     df = load_raw_data(raw_path)
 
     # Standardize
     df = standardize_columns(df)
+
+    # Normalize units (seconds -> minutes) before any filtering/derived metrics
+    df = normalize_duration_to_minutes(
+        df,
+        duration_col="duration",
+        raw_unit="seconds",
+        keep_raw_seconds=True,
+        heuristic_if_unknown=True,
+    )
 
     # Filter session rows
     df = filter_match_sessions(df, league)

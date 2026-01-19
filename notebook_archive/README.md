@@ -164,8 +164,6 @@ python scripts/run_full_analysis.py --league upl --input data.csv -o results/
 
 ### Script Documentation
 - User guide: [../scripts/README.md](../scripts/README.md)
-- Migration guide: [../MIGRATION_GUIDE.md](../MIGRATION_GUIDE.md)
-- Quick reference: [../PHASE_1_QUICK_REFERENCE.md](../PHASE_1_QUICK_REFERENCE.md)
 
 ### Getting Help
 ```bash

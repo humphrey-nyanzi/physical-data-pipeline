@@ -196,7 +196,7 @@ UPL_MISSING_POSITIONS = {
 
 LEAGUE_CONFIG = {
     "fwsl": {
-        "name": "Football Women's Super League",
+        "name": "FUFA Women's Super League",
         "clubs": FWSL_CLUBS,
         "session_pattern": FWSL_SESSION_PATTERN,
         "session_prefix": "Wmd",

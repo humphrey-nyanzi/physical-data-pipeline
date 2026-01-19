@@ -129,7 +129,7 @@ def check_sparsity(df: pd.DataFrame, threshold: float = 0.95) -> List[str]:
 
 
 def validate_duration(
-    df: pd.DataFrame, col: str = "duration_minutes", min_duration: float = 60
+    df: pd.DataFrame, col: str = "duration", min_duration: float = 60
 ) -> Tuple[int, pd.Series]:
     """Validate match/session duration.
 

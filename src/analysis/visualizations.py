@@ -10,11 +10,46 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from io import BytesIO
+# import matplotlib.ticker as ticker # Unused for now
+
+# Configure default style
+plt.style.use('seaborn-v0_8-whitegrid')
 
 try:
     from IPython.display import HTML
 except ImportError:
     HTML = None  # Optional: for non-notebook environments
+
+def apply_professional_style(ax, title: str, xlabel: str, ylabel: str):
+    """
+    Apply a professional, clean style to a matplotlib axis.
+    
+    Args:
+        ax: Matplotlib axis object
+        title: Plot title
+        xlabel: X-axis label
+        ylabel: Y-axis label
+    """
+    # Remove top and right spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Clean up ticks
+    ax.tick_params(axis='both', which='both', length=0)
+    
+    # Add light grid
+    ax.grid(True, axis='y', linestyle='--', alpha=0.3, color='#cccccc')
+    ax.set_axisbelow(True)
+    
+    # Set labels with nice fonts
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20, loc='left', color='#333333')
+    ax.set_xlabel(xlabel, fontsize=10, fontweight='bold', color='#555555')
+    ax.set_ylabel(ylabel, fontsize=10, fontweight='bold', color='#555555')
+    
+    # Customize tick labels
+    ax.tick_params(axis='x', rotation=45, labelsize=9)
+    ax.tick_params(axis='y', labelsize=9)
 
 
 # ============================================================================
@@ -262,9 +297,198 @@ def plot_stacked_bar_coverage(
     plt.show()
 
 
-# ============================================================================
-# Heat Map: Matchday-Club Coverage
-# ============================================================================
+    ax.tick_params(axis='x', rotation=45, labelsize=9)
+    ax.tick_params(axis='y', labelsize=9)
+
+def plot_top_performers_bar(
+    leaderboard_df: pd.DataFrame,
+    metric: str,
+    metric_name: str,
+    figsize: Tuple[int, int] = (10, 8),
+    color: str = "#1f77b4"
+):
+    """Plot horizontal bar chart of top performers."""
+    fig, ax = plt.subplots(figsize=figsize)
+    df_sorted = leaderboard_df.sort_values(metric, ascending=True)
+    
+    bars = ax.barh(df_sorted['p_name'] + ' (' + df_sorted['player_club_'] + ')', 
+                  df_sorted[metric], 
+                  color=color, alpha=0.8)
+    
+    for bar in bars:
+        width = bar.get_width()
+        val_str = f'{width:.0f}' if width > 10 else f'{width:.1f}'
+        ax.text(width, bar.get_y() + bar.get_height()/2, 
+                val_str, 
+                ha='left', va='center', fontweight='bold', fontsize=9, color='#333333')
+                
+    apply_professional_style(ax, f"TopPlayers - {metric_name}", metric_name, "")
+    plt.tight_layout()
+    return fig
+
+def plot_league_trend(
+    trend_df: pd.DataFrame,
+    metric: str,
+    metric_name: str,
+    figsize: Tuple[int, int] = (12, 6),
+    color: str = "#ff7f0e"
+):
+    """
+    Plot league-wide trend over matchdays.
+    
+    Args:
+        trend_df: DataFrame with ['match_day', metric] (aggregated mean)
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Ensure correct ordering if match_day is string Md1, Md2...
+    # helper to sort naturally
+    try:
+        trend_df = trend_df.copy()
+        import re
+        trend_df['sort_key'] = trend_df['match_day'].apply(lambda x: int(re.search(r'\d+', str(x)).group()) if re.search(r'\d+', str(x)) else 0)
+        trend_df = trend_df.sort_values('sort_key')
+    except Exception:
+        pass # Fallback
+        
+    ax.plot(trend_df['match_day'], trend_df[metric], marker='o', linewidth=2.5, color=color)
+    ax.fill_between(trend_df['match_day'], trend_df[metric], alpha=0.1, color=color)
+    
+    apply_professional_style(ax, f"{metric_name} Trend", "Match Day", metric_name)
+    ax.tick_params(axis='x', rotation=90)
+    
+    plt.tight_layout()
+    return fig
+
+def plot_coverage_heatmap(
+    grid_df: pd.DataFrame,
+    figsize: Tuple[int, int] = (12, 8)
+):
+    """
+    Plot heatmap of matchday participation.
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Custom cmap: 0=light grey/red, 1=green
+    cmap = sns.color_palette(["#f8d7da", "#d4edda"], as_cmap=True)
+    # Or simple binary
+    from matplotlib.colors import ListedColormap
+    cmap = ListedColormap(['#eeeeee', '#28a745']) # Grey vs Green
+    
+    sns.heatmap(grid_df, cmap=cmap, cbar=False, linewidths=1, linecolor='white', ax=ax, annot=False)
+    
+    # Ax settings
+    ax.set_title("Matchday Coverage Analysis", fontsize=14, fontweight='bold', pad=20)
+    ax.set_xlabel("Match Day", fontweight='bold')
+    ax.set_ylabel("Club", fontweight='bold')
+    plt.tight_layout()
+    return fig
+
+def plot_metric_histogram(
+    df: pd.DataFrame,
+    metric: str,
+    metric_name: str,
+    color: str = "#17a2b8"
+):
+    """Plot distribution of a metric."""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    sns.histplot(df[metric].dropna(), kde=True, color=color, ax=ax, edgecolor='white')
+    
+    mean_val = df[metric].mean()
+    ax.axvline(mean_val, color='red', linestyle='--', label=f'Mean: {mean_val:.1f}')
+    ax.legend()
+    
+    apply_professional_style(ax, f"Distribution of {metric_name}", metric_name, "Frequency")
+    plt.tight_layout()
+    return fig
+
+def plot_rolling_trend_grid(
+    df: pd.DataFrame,
+    metrics: Dict[str, str], # metric_col -> display_name
+    window: int = 3
+):
+    """
+    Plot 2x2 grid of rolling averages for key metrics.
+    """
+    # Create aggregated daily stats
+    # Sort by matchday first
+    import re
+    def get_md_num(s):
+        m = re.search(r'\d+', str(s))
+        return int(m.group()) if m else 0
+        
+    daily = df.groupby('match_day')[list(metrics.keys())].mean().reset_index()
+    daily['md_num'] = daily['match_day'].apply(get_md_num)
+    daily = daily.sort_values('md_num')
+    
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    axes = axes.flatten()
+    
+    for i, (metric, name) in enumerate(metrics.items()):
+        ax = axes[i]
+        
+        # Raw line
+        ax.plot(daily['match_day'], daily[metric], color='#cccccc', alpha=0.5, label='Daily Avg')
+        
+        # Rolling line
+        if len(daily) >= window:
+            rolling = daily[metric].rolling(window=window, min_periods=1).mean()
+            ax.plot(daily['match_day'], rolling, color='#1f77b4', linewidth=2.5, label=f'{window}-MD Rolling')
+            
+        apply_professional_style(ax, f"{name} Trend", "", name)
+        
+        # Rotate x labels for all
+        ax.tick_params(axis='x', rotation=90)
+        
+    plt.tight_layout()
+    return fig
+
+def plot_speed_zones_stacked(
+    stats_df: pd.DataFrame,
+    title: str = "Speed Zones by Position"
+):
+    """
+    Plot 100% stacked bar chart for speed zones.
+    stats_df: Index=Position, Cols=Zones (values are %)
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    stats_df.plot(kind='bar', stacked=True, ax=ax, colormap='viridis', alpha=0.9, width=0.8)
+    
+    apply_professional_style(ax, title, "Position", "Percentage (%)")
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Add labels
+    for c in ax.containers:
+        ax.bar_label(c, fmt='%.0f%%', label_type='center', color='white', fontsize=8)
+        
+    plt.tight_layout()
+    return fig
+
+def plot_context_comparison(
+    context_df: pd.DataFrame,
+    metric: str,
+    metric_name: str,
+    xlabel: str = "Context"
+):
+    """From DataFrame index=Context, col=Metric"""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    bars = ax.bar(context_df.index, context_df[metric], color='#6c757d', alpha=0.8)
+    
+    # Highlight max
+    max_val = context_df[metric].max()
+    for bar in bars:
+        if bar.get_height() == max_val:
+            bar.set_color('#28a745')
+            
+    # Labels
+    ax.bar_label(bars, fmt='%.1f')
+    
+    apply_professional_style(ax, f"{metric_name} by {xlabel}", xlabel, metric_name)
+    plt.tight_layout()
+    return fig
 
 
 def plot_matchday_club_heatmap(

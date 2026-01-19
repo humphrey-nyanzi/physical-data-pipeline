@@ -40,4 +40,20 @@ def test_drop_sparse_columns():
     assert "a" in out.columns
 
 
+def test_normalize_duration_to_minutes_seconds_input():
+    df = pd.DataFrame({"duration": [5400, 2700, 0, None]})
+    out = cleaning.normalize_duration_to_minutes(df, raw_unit="seconds")
+
+    assert "duration_seconds_raw" in out.columns
+    assert np.isclose(out.loc[0, "duration"], 90.0)
+    assert np.isclose(out.loc[1, "duration"], 45.0)
+
+
+def test_normalize_duration_to_minutes_heuristic_auto():
+    # Looks like seconds (very large for minutes)
+    df = pd.DataFrame({"duration": [5400, 5600, 5300]})
+    out = cleaning.normalize_duration_to_minutes(df, raw_unit="auto")
+    assert out["duration"].median() < 200
+
+
 # Note: Full pipeline test would require the large raw CSV; we avoid executing it in CI.

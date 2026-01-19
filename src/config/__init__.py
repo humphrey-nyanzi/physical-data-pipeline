@@ -40,6 +40,29 @@ from .constants import (
     get_volume_and_intensity_metrics,
 )
 
+import yaml
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+
+# Cached configuration for analysis_config()
+_analysis_config_cache: Optional[Dict[str, Any]] = None
+
+
+def analysis_config(reload: bool = False) -> Dict[str, Any]:
+    """
+    Load and return the analysis configuration from analysis_config.yaml.
+
+    The result is cached by default. Pass reload=True to force a fresh read.
+    """
+    global _analysis_config_cache
+    if reload or _analysis_config_cache is None:
+        config_path = Path(__file__).parent / "analysis_config.yaml"
+        if not config_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+        with config_path.open("r", encoding="utf-8") as f:
+            _analysis_config_cache = yaml.safe_load(f) or {}
+    return _analysis_config_cache
 __all__ = [
     # League definitions
     "FWSL_CLUBS",
@@ -73,4 +96,5 @@ __all__ = [
     "get_metric_display_name",
     "get_all_metrics",
     "get_volume_and_intensity_metrics",
+    "analysis_config",
 ]
