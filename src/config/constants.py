@@ -52,6 +52,10 @@ CORE_METRICS = [
     "work_ratio",
     "max_acceleration_mss",
     "max_deceleration_mss",
+    "total_accelerations",
+    "total_decelerations",
+    "acc_counts_per_min",
+    "dec_counts_per_min",
 ]
 
 # ============================================================================
@@ -102,6 +106,8 @@ DECELERATION_ZONE_COLUMNS = [
 
 # Computed metric names
 COMPUTED_METRICS = {
+    "acc_counts_per_min": ("total_accelerations", "duration"),
+    "dec_counts_per_min": ("total_decelerations", "duration"),
     "total_accelerations": ACCELERATION_ZONE_COLUMNS,
     "total_decelerations": DECELERATION_ZONE_COLUMNS,
 }
@@ -115,7 +121,6 @@ MERGE_KEYS = [
     "p_name",
     "club_for",
     "club_against",
-    "player_club_",
     "match_day",
     "general_position",
     "player_position",

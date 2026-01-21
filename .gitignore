@@ -51,7 +51,7 @@ data/processed/*.csv
 # Reports & Outputs
 reports/**/*.docx
 reports/**/*.xlsx
-outputs/
+Output/
 logs/*.log
 
 # Testing

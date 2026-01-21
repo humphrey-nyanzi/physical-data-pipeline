@@ -157,7 +157,7 @@ def get_coverage_grid(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_max_matches_players(df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
     """Return players with highest number of analyzed matches."""
-    counts = df.groupby(['p_name', 'player_club_'])['match_day'].nunique().reset_index(name='matches')
+    counts = df.groupby(['p_name', 'club_for'])['match_day'].nunique().reset_index(name='matches')
     return counts.sort_values('matches', ascending=False).head(top_n)
 
 # ============================================================================
@@ -187,7 +187,7 @@ def get_max_performers(df: pd.DataFrame, metrics: List[str]) -> Dict[str, pd.Dat
             # Get max row for this metric
             # Or get max value per player then sort?
             # Usually we want "Single highest session record"
-            top = df.nlargest(10, metric)[['p_name', 'player_club_', 'match_day', metric]]
+            top = df.nlargest(10, metric)[['p_name', 'club_for', 'match_day', metric]]
             leaderboards[metric] = top
     return leaderboards
 
@@ -202,8 +202,8 @@ def get_contextual_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     if 'location' in df.columns:
         stats['location'] = df.groupby('location')[valid_metrics].mean()
         
-    if 'match_result' in df.columns:
-        stats['result'] = df.groupby('match_result')[valid_metrics].mean()
+    if 'result' in df.columns:
+        stats['result'] = df.groupby('result')[valid_metrics].mean()
         
     return stats
 

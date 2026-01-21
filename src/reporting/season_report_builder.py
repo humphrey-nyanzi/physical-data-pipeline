@@ -9,14 +9,12 @@ import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from typing import Dict, List, Optional, Any
 
 from ..analysis import season_analysis
 from ..analysis import visualizations
 from . import document_generation as doc_gen
-from ..config import league_definitions, constants
+from src.config.styles import ReportStyles
 import yaml
 from pathlib import Path
 
@@ -39,10 +37,24 @@ class SeasonReportBuilder:
         
         # Load config
         self.config_path = Path(__file__).parents[2] / "scripts" / "config" / "analysis_config.yaml"
-        with open(self.config_path, 'r') as f:
-            self.config = yaml.safe_load(f)
+        # Use simpler relative path if possible or keep as is? 
+        # Path(__file__).parents[2] is src/.. -> root?
+        # scripts/config is relative to root.
+        
+        # Safe loading
+        if self.config_path.exists():
+            with open(self.config_path, 'r') as f:
+                self.config = yaml.safe_load(f)
+        else:
+             self.config = {} # improved error handling during refactor
 
         self.doc = Document()
+        self._configure_styles()
+    
+    def _configure_styles(self):
+        """Apply centralized styles."""
+        ReportStyles.apply_normal_style(self.doc)
+        ReportStyles.apply_heading_styles(self.doc)
         
     def build_report(self):
         """Execute the full report generation pipeline."""
@@ -78,8 +90,9 @@ class SeasonReportBuilder:
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = p.add_run(title)
         run.bold = True
-        run.font.size = Pt(24)
-        run.font.color.rgb = RGBColor(0, 0, 0)
+        run.font.name = ReportStyles.FONT_NAME
+        run.font.size = ReportStyles.FONT_SIZE_TITLE
+        run.font.color.rgb = ReportStyles.COLOR_BLACK
         
         self.doc.add_paragraph("\n" * 4)
         
@@ -249,7 +262,7 @@ class SeasonReportBuilder:
             if not df.empty:
                 top_p = df.iloc[0]
                 self.doc.add_paragraph(
-                    f"Highest {metric}: {top_p['p_name']} ({top_p['player_club_']}) - {top_p[metric]:.2f}"
+                    f"Highest {metric}: {top_p['p_name']} ({top_p['club_for']}) - {top_p[metric]:.2f}"
                 )
                 safe_df = df.copy() # Avoid modification
                 doc_gen.add_dataframe_as_table(self.doc, safe_df.round(2))

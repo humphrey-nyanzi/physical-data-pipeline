@@ -29,9 +29,17 @@ def load_raw_data(path: str = None) -> pd.DataFrame:
 
 
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Lowercase column names and remove leading/trailing spaces."""
+    """Standardize column names: lowercase, remove special characters, underscores.
+
+    Matches exactly the logic from the project's cleaning notebooks.
+    """
     df = df.copy()
-    df.columns = [c.strip().lower() for c in df.columns]
+    df.columns = (
+        df.columns.str.strip()
+        .str.lower()
+        .str.replace(r"\s+", "_", regex=True)
+        .str.replace(r"[\/\(\)\-]", "", regex=True)
+    )
     return df
 
 
@@ -98,7 +106,7 @@ def filter_match_sessions(df: pd.DataFrame, league: str) -> pd.DataFrame:
     df = df.copy()
     pattern = league_definitions.get_league_session_pattern(league)
     if "session_title" in df.columns:
-        mask = df["session_title"].astype(str).str.match(pattern)
+        mask = df["session_title"].astype(str).str.match(pattern, na=False, case=False)
         return df.loc[mask].reset_index(drop=True)
     # If no session_title column, just return input
     return df
@@ -129,6 +137,15 @@ def extract_player_columns(df: pd.DataFrame) -> pd.DataFrame:
     cleaned_df = text_cleaning.apply_text_cleaning_to_columns(
         cleaned_df, ["p_name", "player_club_", "player_position"]
     )
+    
+    # Ensure mandatory join columns are present
+    # player_club_ and club_for are both kept as per MERGE_KEYS
+    if "club_for" not in cleaned_df.columns:
+        cleaned_df["club_for"] = cleaned_df["player_club_"]
+
+    # Ensure club_against exists (needed for normalization/tables even if empty)
+    if "club_against" not in cleaned_df.columns:
+        cleaned_df["club_against"] = pd.NA
 
     # Normalize positions (general_position)
     mapping = league_definitions.POSITION_MAPPING
@@ -138,6 +155,91 @@ def extract_player_columns(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return cleaned_df
+
+
+def extract_session_info(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract matchday, teams, location, league, and result from session_title.
+
+    Standard format: 'Md1-Kcca Fc-Ura Fc-Home-League-Win'
+    """
+    if "session_title" not in df.columns:
+        return df
+
+    df = df.copy()
+
+    # 1. Clean the session title
+    df["session_title"] = (
+        df["session_title"]
+        .astype(str)
+        .str.strip()
+        .str.replace(r"\.+", "", regex=True)  # remove dots like "F.C."
+        .str.replace(r"\s*-\s*", "-", regex=True)  # normalize spacing around hyphens
+        .str.replace(r"\s+", " ", regex=True)  # reduce internal whitespace
+        .str.title()  # ensure proper capitalization
+    )
+
+    # 2. Extract session components: 6 fields + ignore trailing data
+    session_regex = re.compile(
+        r"^(Md\d+)-"  # Matchday
+        r"(.+?)-"  # Club For
+        r"(.+?)-"  # Club Against
+        r"(.+?)"  # Part 1: location/league/result
+        r"[-\s]+(.+?)"  # Part 2: location/league/result
+        r"[-\s]+(.+?)"  # Part 3: location/league/result
+        r"(?:\s|$)",  # Ignore trailing info
+        re.IGNORECASE,
+    )
+
+    extracted = df["session_title"].str.extract(session_regex)
+    if extracted.isnull().all().all():
+        return df
+
+    # Assign temporary column names
+    extracted.columns = [
+        "match_day",
+        "ex_club_for",
+        "ex_club_against",
+        "part1",
+        "part2",
+        "part3",
+    ]
+
+    # Define sets to identify
+    location_set = {"Home", "Away"}
+    league_set = {"League", "Cup"}
+    result_set = {"Win", "Loss", "Draw"}
+
+    # Assign actual values to correct columns
+    extracted["location"] = None
+    extracted["league"] = None
+    extracted["result"] = None
+
+    for i, row in extracted.iterrows():
+        for val in [row["part1"], row["part2"], row["part3"]]:
+            if pd.isna(val):
+                continue
+            val_clean = val.strip().title()
+            if val_clean in location_set:
+                extracted.at[i, "location"] = val_clean
+            elif val_clean in league_set:
+                extracted.at[i, "league"] = val_clean
+            elif val_clean in result_set:
+                extracted.at[i, "result"] = val_clean
+
+    # Keep only fully matched rows for filtering
+    valid_mask = extracted[["location", "league", "result"]].notnull().all(axis=1)
+    df = df.loc[valid_mask].reset_index(drop=True)
+    extracted = extracted.loc[valid_mask].reset_index(drop=True)
+
+    # Add extracted columns to df
+    # Notebook extracts club_for and club_against from session title too
+    df["match_day"] = extracted["match_day"]
+    df["club_for"] = extracted["ex_club_for"]
+    df["club_against"] = extracted["ex_club_against"]
+    df["location"] = extracted["location"]
+    df["result"] = extracted["result"]
+
+    return df
 
 
 def normalize_clubs(df: pd.DataFrame, league: str) -> pd.DataFrame:
@@ -182,24 +284,33 @@ def compute_derived_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
     # Derived rate metrics
     if "duration" in df.columns:
-        df["acc_counts_per_min"] = df["total_accelerations"] / df["duration"].replace(
-            0, np.nan
-        )
-        df["dec_counts_per_min"] = df["total_decelerations"] / df["duration"].replace(
-            0, np.nan
-        )
+        dur_nonzero = df["duration"].replace(0, np.nan)
+        df["acc_counts_per_min"] = df["total_accelerations"] / dur_nonzero
+        df["dec_counts_per_min"] = df["total_decelerations"] / dur_nonzero
+        
+        if "distance_km" in df.columns:
+            # distance_km * 1000 / duration -> m/min
+            df["distance_per_min_mmin"] = (df["distance_km"] * 1000) / dur_nonzero
     else:
         df["acc_counts_per_min"] = np.nan
         df["dec_counts_per_min"] = np.nan
+        df["distance_per_min_mmin"] = np.nan
 
     return df
 
 
 def drop_sparse_columns(df: pd.DataFrame, threshold: float = None) -> pd.DataFrame:
-    """Drop columns that are mostly zeros or NA based on `SPARSE_COLUMN_THRESHOLD`."""
+    """Drop columns that are mostly zeros or NA based on `SPARSE_COLUMN_THRESHOLD`.
+
+    Note: Always keeps columns listed in `constants.CORE_METRICS` or
+    `constants.COMPUTED_METRICS` to avoid breaking downstream analysis.
+    """
     df = df.copy()
     if threshold is None:
         threshold = constants.SPARSE_COLUMN_THRESHOLD
+
+    # Metrics we must keep
+    must_keep = set(constants.CORE_METRICS) | set(constants.COMPUTED_METRICS.keys())
 
     # Columns where proportion of zeros is greater than threshold
     def prop_zeros(s: pd.Series) -> float:
@@ -207,7 +318,11 @@ def drop_sparse_columns(df: pd.DataFrame, threshold: float = None) -> pd.DataFra
             return 0.0
         return (s.fillna(0) == 0).mean()
 
-    keep = [c for c in df.columns if prop_zeros(df[c]) < threshold]
+    keep = [
+        c
+        for c in df.columns
+        if c in must_keep or prop_zeros(df[c]) < threshold
+    ]
     return df[keep]
 
 
@@ -322,7 +437,10 @@ def clean_pipeline(
     # Filter session rows
     df = filter_match_sessions(df, league)
 
-    # Extract player columns (p_name, player_club_, player_position)
+    # Extract session info (match_day, location, result)
+    df = extract_session_info(df)
+
+    # Extract player columns (p_name, player_club_, player_position, club_for)
     df = extract_player_columns(df)
 
     # Normalize clubs
@@ -342,6 +460,9 @@ def clean_pipeline(
 
     # Aggregate halves
     df = aggregate_halves(df)
+
+    # Re-compute derived metrics (especially rates) after aggregation
+    df = compute_derived_metrics(df)
 
     # Save
     out_path = save_processed(df, league)

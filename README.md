@@ -5,6 +5,7 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 ## 🎯 Quick Start
 
 ### Prerequisites
+
 - Python 3.8+
 - pip (Python package manager)
 - Jupyter Notebook or VS Code with Jupyter extension
@@ -12,12 +13,14 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/fufa-rst/Match-Analysis.git
    cd Match-Analysis
    ```
 
 2. **Set up Python environment**
+
    ```bash
    python -m venv .venv
    # On Windows:
@@ -27,11 +30,13 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Configure environment (optional)**
+
    ```bash
    cp .env.example .env
    # Edit .env with your settings
@@ -40,17 +45,25 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 ### Running the Pipeline
 
 **Option 1: Interactive Notebook (Recommended for new users)**
+
 ```bash
 jupyter notebook main_pipeline.ipynb
 ```
+
 This opens an interactive notebook where you can:
+
 - Select league (FWSL or UPL)
 - Run analysis step-by-step
 - View outputs and visualizations immediately
 
-**Option 2: Python Script**
+**Option 2: Unified CLI (Recommended for production/batch processing)**
+
 ```bash
-python scripts/run_pipeline.py
+# Weekly GPS Report
+python scripts/match_analysis.py weekly --md 11
+
+# Season/Half-Season Report
+python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
 ```
 
 ---
@@ -105,7 +118,12 @@ Match-Analysis/
 │   └── utils/                    # Utility functions
 │       ├── text_cleaning.py      # Name normalization, fuzzy matching
 │       ├── styling.py            # Word document styling
-│       └── normalization.py      # Club/position mapping
+│   └── normalization.py      # Club/position mapping
+│
+├── src/pipelines/                # NEW: Pipeline Orchestrators
+│   ├── base.py                   # Abstract base class for pipelines
+│   ├── weekly.py                 # Weekly report pipeline logic
+│   └── season.py                 # Season analysis pipeline logic
 │
 ├── notebooks/                    # Interactive analysis workflows
 │   ├── main_pipeline.ipynb       # Entry point (league selection)
@@ -126,10 +144,9 @@ Match-Analysis/
 │   ├── UPL/                      # Men's league club reports
 │   └── README.md                 # Report guide
 │
-├── scripts/                      # Standalone utility scripts
-│   ├── run_pipeline.py           # Full pipeline automation
-│   ├── validate_data.py          # Data quality checks
-│   └── generate_reports.py       # Batch report generation
+├── scripts/                      # Unified CLI entry point
+│   ├── match_analysis.py         # SINGLE entry point (CLI)
+│   └── run_tests_local.py        # Local test runner
 │
 ├── tests/                        # Automated tests
 │   ├── conftest.py               # Pytest fixtures & configuration
@@ -189,6 +206,7 @@ df.to_csv('data/processed/FWSL25_matches_clean.csv', index=False)
 ```
 
 **What happens:**
+
 - Column standardization (lowercase, trim whitespace)
 - Filter to match sessions only (exclude practice)
 - Club name normalization (fuzzy matching to standard names)
@@ -210,6 +228,7 @@ summary = compute_summary_statistics(df, by_position=True)
 ```
 
 **Key Metrics:**
+
 - **Volume:** Total distance, sprints, accelerations
 - **Intensity:** Player load, max speed, top acceleration
 - **Efficiency:** Distance per minute, actions per minute
@@ -230,6 +249,7 @@ create_club_report(
 ```
 
 **Report Contents:**
+
 - Team summary & key statistics
 - Player profiles & rankings
 - Performance charts & visualizations
@@ -268,6 +288,7 @@ See [data/processed/README.md](data/processed/README.md) for full schema.
 ## 🛠️ Key Modules
 
 ### `src.config.constants`
+
 Global configuration, thresholds, and settings.
 
 ```python
@@ -284,6 +305,7 @@ FWSL_PROCESSED_OUTPUT = 'FWSL25_matches_clean.csv'
 ```
 
 ### `src.data.cleaning`
+
 Main data cleaning functions.
 
 ```python
@@ -299,6 +321,7 @@ df = clean_matches(league='fwsl')
 ```
 
 ### `src.analysis.analysis`
+
 Metric computation and aggregation.
 
 ```python
@@ -314,6 +337,7 @@ team_stats = compute_summary_statistics(df, by_position=True)
 ```
 
 ### `src.reporting.document_generator`
+
 Generate Word documents.
 
 ```python
@@ -333,6 +357,7 @@ create_club_report(
 ### FWSL (Uganda Women's Football Super League)
 
 **Teams (12):**
+
 - Amus College WFC
 - Kawempe Muslim LFC
 - Kampala Queens FC
@@ -351,6 +376,7 @@ create_club_report(
 ### UPL (Uganda Premier League)
 
 **Teams (16):**
+
 - BUL FC
 - KCCA FC
 - SC Villa
@@ -460,6 +486,7 @@ create_club_report(
 **Location:** `reports/FWSL/` and `reports/UPL/`
 
 Each report includes:
+
 - **Executive Summary** - Season overview, key statistics
 - **Player Profiles** - Individual performance tables
 - **Performance Metrics** - Distance, sprints, accelerations
@@ -506,6 +533,7 @@ OUTLIER_IQR_MULTIPLIER=1.5
 ### Constants
 
 Edit [src/config/constants.py](src/config/constants.py) for:
+
 - Minimum session duration
 - Outlier detection thresholds
 - Column name mappings
@@ -580,11 +608,13 @@ forwards.to_csv('outputs/forwards_analysis.csv', index=False)
 ### Issue: "Module not found" errors
 
 **Solution:** Ensure Python path includes project root
+
 ```bash
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ```
 
 Or in Python:
+
 ```python
 import sys
 sys.path.insert(0, '/path/to/Match-Analysis')
@@ -593,6 +623,7 @@ sys.path.insert(0, '/path/to/Match-Analysis')
 ### Issue: Raw data file not found
 
 **Solution:** Check file path in [src/config/constants.py](src/config/constants.py)
+
 ```python
 RAW_DATA_FILE = "./data/raw/all_catapult_data_16_Jul_25.csv"
 ```
@@ -600,6 +631,7 @@ RAW_DATA_FILE = "./data/raw/all_catapult_data_16_Jul_25.csv"
 ### Issue: Club names not matching
 
 **Solution:** Add mapping to `CLUB_CORRECTIONS_*` in [src/config/constants.py](src/config/constants.py)
+
 ```python
 CLUB_CORRECTIONS_FWSL = {
     "Typo Name": "Correct Name",
@@ -609,6 +641,7 @@ CLUB_CORRECTIONS_FWSL = {
 ### Issue: Slow data processing
 
 **Solution:** Check data size, filter by league/date before analysis
+
 ```python
 df = clean_matches(league='fwsl')  # Process one league at a time
 df_recent = df[df['match_date'] >= '2025-01-01']  # Filter by date
@@ -667,7 +700,7 @@ df_recent = df[df['match_date'] >= '2025-01-01']  # Filter by date
 
 For questions, issues, or suggestions:
 
-- **Repository:** https://github.com/fufa-rst/Match-Analysis
+- **Repository:** <https://github.com/fufa-rst/Match-Analysis>
 - **Issues:** GitHub Issues tracker
 - **Documentation:** See `/docs` folder
 
