@@ -27,8 +27,8 @@ SPARSE_COLUMN_THRESHOLD = 0.95
 # ============================================================================
 
 SPLIT_NAMES = {
-    "raw_1st": "1St.Half",
-    "raw_2nd": "2Nd.Half",
+    "raw_1st": "1st.half",
+    "raw_2nd": "2nd.half",
     "standard_1st": "1st Half",
     "standard_2nd": "2nd Half",
 }
@@ -56,6 +56,12 @@ CORE_METRICS = [
     "total_decelerations",
     "acc_counts_per_min",
     "dec_counts_per_min",
+    # Speed zone distance columns (required for speed zone breakdown analysis)
+    "distance_in_speed_zone_1_km",
+    "distance_in_speed_zone_2_km",
+    "distance_in_speed_zone_3_km",
+    "distance_in_speed_zone_4_km",
+    "distance_in_speed_zone_5_km",
 ]
 
 # ============================================================================
@@ -138,6 +144,8 @@ AGGREGATE_SUM_METRICS = [
         "distance_per_min_mmin",
         "max_acceleration_mss",
         "max_deceleration_mss",
+        "acc_counts_per_min",
+        "dec_counts_per_min",
     ]
 ]
 

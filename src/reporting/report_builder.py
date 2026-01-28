@@ -15,6 +15,7 @@ Version: 1.0
 import pandas as pd
 import numpy as np
 from typing import Tuple, Dict, List, Optional
+from src.config.speed_zones import get_speed_zones
 
 
 def get_matchday_stats(
@@ -130,9 +131,16 @@ def get_metric_summary(
     """
     all_metrics = volume_metrics + intensity_metrics
 
+    # Compute stats
     summary = club_df[all_metrics].agg(["sum", "max", "min", "mean", "std"])
-    summary = summary.rename(columns=metric_display_names)
-    summary = summary.T.reset_index().rename(columns={"index": "Metric"})
+    summary = summary.T
+    
+    # Null out 'sum' for intensity metrics
+    summary.loc[intensity_metrics, "sum"] = np.nan
+    
+    summary = summary.reset_index().rename(columns={"index": "Metric"})
+    summary["Metric"] = summary["Metric"].map(metric_display_names).fillna(summary["Metric"])
+    
     summary = summary.rename(
         columns={
             "sum": "Total",
@@ -180,16 +188,20 @@ def get_top_players_by_metric(
         )
 
     top_players_df = pd.DataFrame(top_players)
-    top_players_df = top_players_df.set_index("metric").T
-    top_players_df = top_players_df.rename(columns=metric_display_names)
+    
+    # Map metrics to display names
+    top_players_df["metric"] = top_players_df["metric"].map(metric_display_names).fillna(top_players_df["metric"])
+    
+    # Rename for professional table display
+    top_players_df = top_players_df.rename(columns={
+        "metric": "Metric",
+        "player": "Player Name",
+        "value": "Value",
+        "match_day": "Match Day"
+    })
 
-    # Drop acceleration/deceleration max columns if they exist
-    cols_to_drop = [
-        col
-        for col in top_players_df.columns
-        if "Max Acceleration" in col or "Max Deceleration" in col
-    ]
-    top_players_df = top_players_df.drop(columns=cols_to_drop, errors="ignore")
+    # Drop specific metrics if needed (already handled by passing correct metrics list usually, but for safety)
+    top_players_df = top_players_df[~top_players_df["Metric"].str.contains("Max Acceleration|Max Deceleration", na=False)]
 
     return top_players_df.round(2)
 
@@ -214,23 +226,53 @@ def get_average_metrics_by_position(
     """
     all_metrics = volume_metrics + intensity_metrics
 
+    # Group by position and compute mean
     avg_by_position = (
-        club_df.groupby("general_position")[all_metrics].mean().round(2).reset_index()
+        club_df.groupby("general_position")[all_metrics].mean().round(2)
     )
 
-    avg_by_position = avg_by_position.rename(
-        columns={"general_position": "Position", **metric_display_names}
+    # Transpose so metrics are rows, positions are columns
+    res = avg_by_position.T
+    res = res.reset_index().rename(columns={"index": "Metric"})
+    
+    # Map metric names
+    res["Metric"] = res["Metric"].map(metric_display_names).fillna(res["Metric"])
+    
+    # Filter out redundant max metrics
+    res = res[~res["Metric"].str.contains("Max Acceleration|Max Deceleration", na=False)]
+
+    return res
+
+
+def get_total_metrics_by_position(
+    club_df: pd.DataFrame,
+    volume_metrics: List[str],
+    metric_display_names: Dict[str, str],
+) -> pd.DataFrame:
+    """
+    Compute total (cumulative) volume metrics grouped by player position.
+
+    Args:
+        club_df: Filtered club data
+        volume_metrics: List of volume metric column names
+        metric_display_names: Dictionary mapping column names to display names
+
+    Returns:
+        DataFrame with metrics as rows and positions as columns
+    """
+    # Group by position and compute sum
+    total_by_position = (
+        club_df.groupby("general_position")[volume_metrics].sum().round(2)
     )
 
-    # Drop acceleration/deceleration max columns if they exist
-    cols_to_drop = [
-        col
-        for col in avg_by_position.columns
-        if "Max Acceleration" in col or "Max Deceleration" in col
-    ]
-    avg_by_position = avg_by_position.drop(columns=cols_to_drop, errors="ignore")
+    # Transpose
+    res = total_by_position.T
+    res = res.reset_index().rename(columns={"index": "Metric"})
+    
+    # Map metric names
+    res["Metric"] = res["Metric"].map(metric_display_names).fillna(res["Metric"])
 
-    return avg_by_position.T.reset_index().rename(columns={"index": "Position"})
+    return res
 
 
 def get_average_metrics_per_matchday(
@@ -312,25 +354,21 @@ def club_vs_season_comparison(
     season_avg = season_df[all_metrics].mean().to_frame(name="Season Average")
 
     comparison = club_avg.join(season_avg)
-    comparison = comparison.round(2).T
-    comparison = comparison.rename(columns=metric_display_names)
 
-    # Drop acceleration/deceleration max columns if they exist
-    cols_to_drop = [
-        col
-        for col in comparison.columns
-        if "Max Acceleration" in col or "Max Deceleration" in col
-    ]
-    comparison = comparison.drop(columns=cols_to_drop, errors="ignore")
-
-    comparison = comparison.T
+    # Calculate percentage difference
     comparison["% Difference"] = (
         (comparison["Club Average"] - comparison["Season Average"])
         / comparison["Season Average"]
-        * 100
-    ).round(2)
+    ) * 100
 
-    return comparison[["Club Average", "Season Average", "% Difference"]]
+    # Rename metrics
+    comparison.index = [metric_display_names.get(m, m) for m in comparison.index]
+
+    # Filter out max metrics
+    comparison = comparison[~comparison.index.str.contains("Max Acceleration|Max Deceleration", na=False)]
+
+    comparison = comparison.reset_index().rename(columns={"index": "Metric"})
+    return comparison[["Metric", "Club Average", "Season Average", "% Difference"]]
 
 
 def positional_comparison_vs_season(
@@ -401,25 +439,79 @@ def positional_comparison_vs_season(
 
 def get_speed_zone_breakdown(
     club_df: pd.DataFrame,
+    season: str = "2025/26"
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Aggregate distance by speed zone and position.
 
     Returns both absolute distances and percentages by position.
+    
+    Handles missing speed zone columns gracefully by dynamically discovering
+    available columns and returning empty DataFrames if none are found.
 
     Args:
         club_df: Filtered club data
+        season: Season string for zone label lookup
 
     Returns:
         Tuple of (zone_distances_df, zone_percentages_df)
     """
-    speed_zone_cols = [
-        "distance_in_speed_zone_1_km",
-        "distance_in_speed_zone_2_km",
-        "distance_in_speed_zone_3_km",
-        "distance_in_speed_zone_4_km",
-        "distance_in_speed_zone_5_km",
+    # Expected column names (try multiple naming patterns)
+    speed_zone_patterns = [
+        # Pattern 1: Single underscore (as expected by reports)
+        [
+            "distance_in_speed_zone_1_km",
+            "distance_in_speed_zone_2_km",
+            "distance_in_speed_zone_3_km",
+            "distance_in_speed_zone_4_km",
+            "distance_in_speed_zone_5_km",
+        ],
+        # Pattern 2: Double underscore (from standardize_columns)
+        [
+            "distance_in_speed_zone_1__km",
+            "distance_in_speed_zone_2__km",
+            "distance_in_speed_zone_3__km",
+            "distance_in_speed_zone_4__km",
+            "distance_in_speed_zone_5__km",
+        ],
     ]
+    
+    # Find which pattern exists in the dataframe
+    speed_zone_cols = []
+    for pattern in speed_zone_patterns:
+        existing = [c for c in pattern if c in club_df.columns]
+        if len(existing) > len(speed_zone_cols):
+            speed_zone_cols = existing
+    
+    # Also try dynamic discovery as fallback
+    if not speed_zone_cols:
+        speed_zone_cols = [
+            c for c in club_df.columns 
+            if 'distance' in c.lower() and 'speed' in c.lower() and 'zone' in c.lower()
+        ]
+        # Sort to ensure consistent ordering (Zone 1, 2, 3, 4, 5)
+        speed_zone_cols = sorted(speed_zone_cols)
+    
+    # If no speed zone columns found, return empty DataFrames with warning
+    if not speed_zone_cols:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "Speed zone columns not found in dataset. "
+            "Speed zone breakdown will be unavailable."
+        )
+        # Debug helper: print a few columns to see what's actually there
+        logger.warning(f"Available columns sample: {list(club_df.columns)[:20]}")
+        # Check specifically for any 'zone' columns
+        zone_cols_debug = [c for c in club_df.columns if 'zone' in c.lower()]
+        logger.warning(f"Columns containing 'zone': {zone_cols_debug}")
+        
+        return pd.DataFrame(), pd.DataFrame()
+    else:
+        # Log successful discovery
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Found {len(speed_zone_cols)} speed zone columns: {speed_zone_cols}")
 
     # Group by position and sum distances
     zone_by_position = club_df.groupby("general_position")[speed_zone_cols].sum()
@@ -427,8 +519,16 @@ def get_speed_zone_breakdown(
     # Create position labels
     zone_by_position.index = [f"{pos}s" for pos in zone_by_position.index]
 
-    # Rename columns
-    zone_labels = [f"Zone {i + 1}" for i in range(len(speed_zone_cols))]
+    # Rename columns with dynamic thresholds
+    zones_dict = get_speed_zones(season)
+    zone_labels = []
+    for i in range(len(speed_zone_cols)):
+        zone_key = f"Zone {i + 1}"
+        if zone_key in zones_dict:
+            zone_labels.append(f"{zone_key} ({zones_dict[zone_key]['range']} km/h)")
+        else:
+            zone_labels.append(zone_key)
+            
     zone_by_position.columns = zone_labels
 
     # Convert to percentages

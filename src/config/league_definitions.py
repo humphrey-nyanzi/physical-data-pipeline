@@ -10,20 +10,27 @@ and normalization across the codebase.
 # FWSL (Football Women's Super League) - Ugandan Women's Top Tier
 # ============================================================================
 
-FWSL_CLUBS = [
-    "Kampala Queens FC",
-    "She Maroons FC",
-    "Makerere University WFC",
-    "Uganda Martyrs Lubaga WFC",
-    "Kawempe Muslim LFC",
-    "Wakiso Hill WFC",
-    "Olila HS WFC",
-    "Rines SS WFC",
-    "Amus College WFC",
-    "She Corporates FC",
-    "Lady Doves FC",
-    "FC Tooro Queens",
-]
+# ============================================================================
+# FWSL (Football Women's Super League) - Ugandan Women's Top Tier
+# ============================================================================
+
+FWSL_CLUBS_BY_SEASON = {
+    "2024/2025": [
+        "Kampala Queens FC", "She Maroons FC", "Makerere University WFC",
+        "Uganda Martyrs Lubaga WFC", "Kawempe Muslim LFC", "Wakiso Hill WFC",
+        "Olila HS WFC", "Rines SS WFC", "Amus College WFC",
+        "She Corporates FC", "Lady Doves FC", "FC Tooro Queens"
+    ],
+    "2025/2026": [
+        "Kampala Queens FC", "She Maroons FC", "Makerere University WFC",
+        "Uganda Martyrs Lubaga WFC", "Kawempe Muslim LFC", "Asubo Ladies FC",
+        "Olila HS WFC", "Rines SS WFC", "Amus College WFC", 
+        "She Corporates FC", "Lady Doves FC", "St Noa Girls-Zana FC"  # Placeholder: Update if promotion/relegation changes
+    ]
+}
+
+# Legacy fallback
+FWSL_CLUBS = FWSL_CLUBS_BY_SEASON["2025/2026"]
 
 FWSL_SESSION_PATTERN = r"^Wmd\d+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+$"
 """
@@ -56,24 +63,22 @@ FWSL_UPLOADED_MATCHES = {
 # UPL (Uganda Premier League) - Ugandan Men's Top Tier
 # ============================================================================
 
-UPL_CLUBS = [
-    "KCCA FC",
-    "BUL FC",
-    "URA FC",
-    "Vipers SC",
-    "Express FC",
-    "SC Villa",
-    "Maroons FC",
-    "Wakiso Giants FC",
-    "Soltilo Bright Stars FC",
-    "Police FC",
-    "UPDF FC",
-    "NEC FC",
-    "Mbarara City FC",
-    "Kitara FC",
-    "Lugazi FC",
-    "Mbale Heroes FC",
-]
+UPL_CLUBS_BY_SEASON = {
+    "2024/2025": [
+        "KCCA FC", "BUL FC", "URA FC", "Vipers SC", "Express FC", "SC Villa",
+        "Maroons FC", "Wakiso Giants FC", "Soltilo Bright Stars FC", "Police FC",
+        "UPDF FC", "NEC FC", "Mbarara City FC", "Kitara FC", "Lugazi FC", "Mbale Heroes FC"
+    ],
+    "2025/2026": [
+         "KCCA FC", "BUL FC", "URA FC", "Vipers SC", "Express FC", "SC Villa",
+        "Maroons FC", "Buhimba United Saints FC", "Calvary FC", "Police FC",
+        "UPDF FC", "NEC FC", "Mbarara City FC", "Kitara FC", "Lugazi FC", "Entebbe UPPC FC"
+        
+    ]
+}
+
+# Legacy fallback
+UPL_CLUBS = UPL_CLUBS_BY_SEASON["2025/2026"]
 
 UPL_SESSION_PATTERN = r"^Md\d+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+$"
 """
@@ -197,7 +202,8 @@ UPL_MISSING_POSITIONS = {
 LEAGUE_CONFIG = {
     "fwsl": {
         "name": "FUFA Women's Super League",
-        "clubs": FWSL_CLUBS,
+        "clubs_by_season": FWSL_CLUBS_BY_SEASON,
+        "clubs": FWSL_CLUBS, # Default/Fallback
         "session_pattern": FWSL_SESSION_PATTERN,
         "session_prefix": "Wmd",
         "max_matchdays": 22,
@@ -207,7 +213,8 @@ LEAGUE_CONFIG = {
     },
     "upl": {
         "name": "Uganda Premier League",
-        "clubs": UPL_CLUBS,
+        "clubs_by_season": UPL_CLUBS_BY_SEASON,
+        "clubs": UPL_CLUBS, # Default/Fallback
         "session_pattern": UPL_SESSION_PATTERN,
         "session_prefix": "Md",
         "max_matchdays": 30,  # UPL typically has more matchdays
@@ -219,15 +226,41 @@ LEAGUE_CONFIG = {
 }
 
 
-def get_league_clubs(league: str) -> list:
+def _normalize_season(season_str: str) -> str:
     """
-    Get the list of standard club names for a given league.
+    Normalize season strings to 'YYYY/YYYY' format.
+    Examples: '25/26' -> '2025/2026', '2025/26' -> '2025/2026'
+    """
+    if not season_str:
+        return "2025/2026"  # Default
+        
+    s = str(season_str).strip()
+    
+    # Handle '25/26' -> '2025/2026'
+    if len(s) == 5 and s[2] == '/':
+        parts = s.split('/')
+        if len(parts) == 2 and len(parts[0]) == 2 and len(parts[1]) == 2:
+            return f"20{parts[0]}/20{parts[1]}"
+            
+    # Handle '2025/26' -> '2025/2026'
+    if len(s) == 7 and s[4] == '/':
+        parts = s.split('/')
+        if len(parts) == 2 and len(parts[0]) == 4 and len(parts[1]) == 2:
+            return f"{parts[0]}/20{parts[1]}"
+            
+    return s
+
+
+def get_league_clubs(league: str, season: str = "2025/2026") -> list:
+    """
+    Get the list of standard club names for a given league and season.
 
     Args:
         league (str): League identifier ('fwsl' or 'upl')
+        season (str): Season identifier (e.g., '2025/2026'). Default '2025/2026'.
 
     Returns:
-        list: List of standard club names
+        list: List of standard club names for that season.
 
     Raises:
         ValueError: If league is not recognized
@@ -237,7 +270,16 @@ def get_league_clubs(league: str) -> list:
         raise ValueError(
             f"Unknown league: {league}. Must be one of: {list(LEAGUE_CONFIG.keys())}"
         )
-    return LEAGUE_CONFIG[league_lower]["clubs"]
+    
+    config = LEAGUE_CONFIG[league_lower]
+    season_norm = _normalize_season(season)
+    
+    # Try to find season specific list
+    if "clubs_by_season" in config and season_norm in config["clubs_by_season"]:
+        return config["clubs_by_season"][season_norm]
+        
+    # Fallback to default clubs if season not found
+    return config["clubs"]
 
 
 def get_league_session_pattern(league: str) -> str:

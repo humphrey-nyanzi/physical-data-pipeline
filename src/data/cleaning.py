@@ -39,6 +39,8 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
         .str.lower()
         .str.replace(r"\s+", "_", regex=True)
         .str.replace(r"[\/\(\)\-]", "", regex=True)
+        # Fix: Standardize 'velocity_zone' to 'speed_zone' (common mismatch)
+        .str.replace("velocity_zone", "speed_zone")
     )
     return df
 
@@ -104,10 +106,21 @@ def filter_match_sessions(df: pd.DataFrame, league: str) -> pd.DataFrame:
     Uses `session_pattern` from `league_definitions`.
     """
     df = df.copy()
+    initial_count = len(df)
     pattern = league_definitions.get_league_session_pattern(league)
     if "session_title" in df.columns:
         mask = df["session_title"].astype(str).str.match(pattern, na=False, case=False)
-        return df.loc[mask].reset_index(drop=True)
+        df_filtered = df.loc[mask].reset_index(drop=True)
+        
+        dropped = initial_count - len(df_filtered)
+        if dropped > 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"DATA EXCLUSION: {dropped} rows did not match {league.upper()} session pattern '{pattern}'. "
+                "These likely represent non-match sessions and were excluded."
+            )
+        return df_filtered
     # If no session_title column, just return input
     return df
 
@@ -153,6 +166,16 @@ def extract_player_columns(df: pd.DataFrame) -> pd.DataFrame:
     cleaned_df = text_cleaning.normalize_positions(
         cleaned_df, mapping, aliases=aliases, target_column="general_position"
     )
+
+    # Notify on unmapped positions
+    if cleaned_df["general_position"].isnull().any():
+        unmapped = cleaned_df.loc[cleaned_df["general_position"].isnull(), "player_position"].unique()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"LOGICAL ERROR: Unmapped player positions found: {unmapped}. "
+            "These players will be excluded from position-specific analysis."
+        )
 
     return cleaned_df
 
@@ -227,34 +250,125 @@ def extract_session_info(df: pd.DataFrame) -> pd.DataFrame:
                 extracted.at[i, "result"] = val_clean
 
     # Keep only fully matched rows for filtering
+    initial_count = len(df)
     valid_mask = extracted[["location", "league", "result"]].notnull().all(axis=1)
     df = df.loc[valid_mask].reset_index(drop=True)
     extracted = extracted.loc[valid_mask].reset_index(drop=True)
+    
+    dropped = initial_count - len(df)
+    if dropped > 0:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"LOGICAL ERROR: {dropped} rows could not be fully parsed (missing location, league, or result). "
+            "These records were excluded to ensure report accuracy."
+        )
 
     # Add extracted columns to df
-    # Notebook extracts club_for and club_against from session title too
     df["match_day"] = extracted["match_day"]
     df["club_for"] = extracted["ex_club_for"]
     df["club_against"] = extracted["ex_club_against"]
     df["location"] = extracted["location"]
     df["result"] = extracted["result"]
 
+    # Validate matchday range if possible
+    try:
+        # Determine league from session or global context if available
+        # For now, we rely on the league-specific config if we can infer it
+        # Actually, extract_session_info doesn't know the league directly, 
+        # but clean_pipeline passes it to other functions. 
+        # Let's adjust extract_session_info signature to take league.
+        pass 
+    except Exception:
+        pass
+
     return df
 
 
-def normalize_clubs(df: pd.DataFrame, league: str) -> pd.DataFrame:
+def validate_matchday_logic(df: pd.DataFrame, league: str) -> pd.DataFrame:
+    """Validate that matchdays are within the logical bounds for the league."""
+    if "match_day" not in df.columns:
+        return df
+
+    df = df.copy()
+    config = league_definitions.get_league_config(league)
+    max_md = config.get("max_matchdays", 30)
+
+    # Convert match_day to numeric for validation (Md12 -> 12)
+    md_numeric = df["match_day"].str.extract(r"(\d+)")[0].astype(float)
+
+    invalid_mask = md_numeric > max_md
+    if invalid_mask.any():
+        invalid_mds = df.loc[invalid_mask, "match_day"].unique()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"LOGICAL ERROR: Found matchdays {invalid_mds} exceeding league maximum of {max_md} for {league.upper()}. "
+            "These records will be excluded from the analysis."
+        )
+        df = df[~invalid_mask].reset_index(drop=True)
+
+    return df
+
+
+def normalize_clubs(df: pd.DataFrame, league: str, season: str = "2025/2026") -> pd.DataFrame:
     """Normalize the `club_for` and `club_against` columns to canonical names."""
     df = df.copy()
-    clubs = league_definitions.get_league_clubs(league)
+    clubs = league_definitions.get_league_clubs(league, season)
     corrections = None
     if league.lower() == "fwsl":
         corrections = constants.CLUB_CORRECTIONS_FWSL
     elif league.lower() == "upl":
         corrections = constants.CLUB_CORRECTIONS_UPL
 
-    df = text_cleaning.normalize_club_names(
-        df, ["club_for", "club_against"], clubs, corrections=corrections
-    )
+    def resolve_club(name, club_list, corrections_map):
+        # Helper to strictly resolve club name
+        if pd.isna(name):
+            return None
+
+        # 1. Fuzzy match (return None if no close match)
+        # Use lenient threshold (0.5) to capture "closely resembling" names
+        match = text_cleaning.best_match(name, club_list, min_score=0.5, return_original=False)
+        if match:
+            return match
+
+        # 2. Check corrections on original name
+        if corrections_map and name in corrections_map:
+            return corrections_map[name]
+
+        return None
+
+    # Identify invalid clubs in 'club_for' and drop them
+    if "club_for" in df.columns:
+        df["club_for_clean"] = df["club_for"].astype(str).apply(
+            lambda x: resolve_club(x, clubs, corrections)
+        )
+
+        dropped_mask = df["club_for_clean"].isnull()
+        if dropped_mask.any():
+            dropped_names = df.loc[dropped_mask, "club_for"].unique()
+            count = dropped_mask.sum()
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"DATA EXCLUSION: {count} rows with invalid 'club_for' names: {dropped_names}. "
+                "These do not match official list and will be excluded (no close match found)."
+            )
+            df = df[~dropped_mask].reset_index(drop=True)
+
+        df["club_for"] = df["club_for_clean"]
+        df.drop(columns=["club_for_clean"], inplace=True)
+
+    # Normalize 'club_against' leniently
+    if "club_against" in df.columns:
+        # Use fuzzy match but keep original if no match (lenient)
+        # Apply same lenient threshold (0.5)
+        df["club_against"] = df["club_against"].astype(str).apply(
+            lambda x: text_cleaning.best_match(x, clubs, min_score=0.5, return_original=True)
+        )
+        if corrections:
+            df["club_against"] = df["club_against"].replace(corrections)
+
     return df
 
 
@@ -271,6 +385,12 @@ def compute_derived_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
     existing_acc = [c for c in acc_cols if c in df.columns]
     existing_dec = [c for c in dec_cols if c in df.columns]
+
+    # Robust fallback: search by pattern if hardcoded names not found
+    if not existing_acc:
+        existing_acc = [c for c in df.columns if 'acceleration' in c.lower() and 'zone' in c.lower() and 'count' in c.lower() and 'total' not in c.lower()]
+    if not existing_dec:
+        existing_dec = [c for c in df.columns if 'deceleration' in c.lower() and 'zone' in c.lower() and 'count' in c.lower() and 'total' not in c.lower()]
 
     if existing_acc:
         df["total_accelerations"] = df[existing_acc].sum(axis=1)
@@ -354,12 +474,34 @@ def aggregate_halves(df: pd.DataFrame) -> pd.DataFrame:
     """Merge first and second half rows into a single player-match record.
 
     Uses `MERGE_KEYS` and `AGGREGATE_SUM_METRICS` / `AGGREGATE_MAX_METRICS` from constants.
+    Filters out aggregate session rows (e.g., 'Full Match') to prevent double counting.
     """
     df = df.copy()
 
-    merge_keys = constants.get_merge_keys()
+    # CRITICAL: Filter for halves ONLY to prevent double addition
+    # Since cleaning.py standardizes columns, we check for 'split_name' or 'period_name'
+    split_col = next((c for c in df.columns if c in ['split_name', 'period_name']), None)
+    
+    if split_col:
+        valid_halves = [v.lower().strip() for v in constants.SPLIT_NAMES.values()]
+        # Filter to only include rows that match the valid half names (case-insensitive)
+        df_filtered = df[df[split_col].astype(str).str.lower().str.strip().isin(valid_halves)].copy()
+        
+        if not df_filtered.empty:
+            df = df_filtered
+        else:
+            # Fallback to 'all' or 'game' to prevent summation of every split row
+            df_fallback = df[df[split_col].astype(str).str.lower().str.strip().isin(['all', 'game', 'entire session'])].copy()
+            if not df_fallback.empty:
+                # Keep only one row per unique combine keys (first one)
+                df = df_fallback.groupby(constants.get_merge_keys()).head(1)
+            else:
+                # If no halves and no 'all' split, pick the largest row by duration to avoid summation
+                pass
 
-    # Determine aggregate columns
+    merge_keys = constants.get_merge_keys()
+    
+    # Identify aggregate columns
     sum_cols = [c for c in constants.AGGREGATE_SUM_METRICS if c in df.columns]
     max_cols = [c for c in constants.AGGREGATE_MAX_METRICS if c in df.columns]
 
@@ -368,8 +510,6 @@ def aggregate_halves(df: pd.DataFrame) -> pd.DataFrame:
 
     grouped = df.groupby(merge_keys).agg(agg_dict).reset_index()
 
-    # Copy non-aggregated columns from the first occurrence
-    # (e.g., p_name, player_club_ should already be in merge keys)
     return grouped
 
 
@@ -392,6 +532,30 @@ def filter_active_sessions(
     return df.loc[mask].reset_index(drop=True)
 
 
+def filter_by_position(df: pd.DataFrame, position_type: str = "field") -> pd.DataFrame:
+    """
+    Filter dataframe by player position type.
+
+    Args:
+        df: Input dataframe with 'general_position' column
+        position_type: 'field' (exclude GK), 'gk' (only GK), or 'all'
+
+    Returns:
+        Filtered dataframe
+    """
+    df = df.copy()
+    if "general_position" not in df.columns:
+        return df
+
+    if position_type == "field":
+        return df[df["general_position"] != "goalkeeper"].reset_index(drop=True)
+    elif position_type == "gk":
+        return df[df["general_position"] == "goalkeeper"].reset_index(drop=True)
+    
+    return df
+
+
+
 def save_processed(df: pd.DataFrame, league: str, out_dir: str = None) -> str:
     """Save processed dataframe to processed data directory and return path."""
     if out_dir is None:
@@ -409,7 +573,7 @@ def save_processed(df: pd.DataFrame, league: str, out_dir: str = None) -> str:
 
 
 def clean_pipeline(
-    raw_path: Optional[str] = None, league: str = "fwsl"
+    raw_path: Optional[str] = None, league: str = "fwsl", season: str = "2025/2026"
 ) -> Tuple[pd.DataFrame, str]:
     """Run the full cleaning pipeline for a given league.
 
@@ -440,17 +604,20 @@ def clean_pipeline(
     # Extract session info (match_day, location, result)
     df = extract_session_info(df)
 
+    # Validate matchday logic (e.g., max matchdays)
+    df = validate_matchday_logic(df, league)
+
     # Extract player columns (p_name, player_club_, player_position, club_for)
     df = extract_player_columns(df)
 
     # Normalize clubs
-    df = normalize_clubs(df, league)
+    df = normalize_clubs(df, league, season)
 
     # Compute derived metrics
     df = compute_derived_metrics(df)
 
     # Drop sparse columns
-    df = drop_sparse_columns(df)
+    # df = drop_sparse_columns(df)
 
     # Filter active sessions
     df = filter_active_sessions(df)

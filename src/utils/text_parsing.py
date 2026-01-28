@@ -13,8 +13,7 @@ def parse_matchday(session_title):
     match = re.search(r'\bMD[\s\-]?(\d{1,2})\b', session_title, re.IGNORECASE)
     if match:
         md_num = int(match.group(1))
-        # Validate reasonable range (max MD for UPL is 30 for WSL is 22)
-        if 1 <= md_num <= 30:
+        if 1 <= md_num <= 50:
             return md_num
     return None
 

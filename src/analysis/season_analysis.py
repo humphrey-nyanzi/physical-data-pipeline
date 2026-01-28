@@ -8,9 +8,8 @@ league-wide aggregations.
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -170,10 +169,19 @@ def get_performance_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
     valid_vol = [m for m in VOLUME_METRICS if m in df.columns]
     valid_int = [m for m in INTENSITY_METRICS if m in df.columns]
-    
+
     stats = {}
-    stats['volume'] = df[valid_vol].agg(['sum', 'mean', 'std']).T
-    stats['intensity'] = df[valid_int].agg(['max', 'mean', 'std']).T
+
+    # Volume: include sum (Total)
+    vol_stats = df[valid_vol].agg(['sum', 'mean', 'std', 'max']).T
+    vol_stats = vol_stats.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
+    stats['volume'] = vol_stats.reset_index().rename(columns={'index': 'Metric'})
+    
+    # Intensity: exclude sum (Total) by setting to NaN
+    int_stats = df[valid_int].agg(['sum', 'mean', 'std', 'max']).T
+    int_stats['sum'] = np.nan # Null out the sum as it makes no analytical sense for intensity
+    int_stats = int_stats.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
+    stats['intensity'] = int_stats.reset_index().rename(columns={'index': 'Metric'})
     
     return stats
 

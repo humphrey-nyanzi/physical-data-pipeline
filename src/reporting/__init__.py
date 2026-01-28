@@ -20,6 +20,7 @@ from .report_builder import (
     positional_comparison_vs_season,
     get_speed_zone_breakdown,
     compute_coverage_summary,
+    get_total_metrics_by_position,
 )
 
 from .document_generation import (
@@ -35,6 +36,7 @@ from .document_generation import (
     embed_matplotlib_axis,
     save_document,
     create_report_document,
+    add_table_of_contents,
 )
 
 __all__ = [
@@ -49,6 +51,7 @@ __all__ = [
     "positional_comparison_vs_season",
     "get_speed_zone_breakdown",
     "compute_coverage_summary",
+    "get_total_metrics_by_position",
     # document_generation
     "fmt_cell_value",
     "add_dataframe_as_table",
@@ -62,4 +65,5 @@ __all__ = [
     "embed_matplotlib_axis",
     "save_document",
     "create_report_document",
+    "add_table_of_contents",
 ]

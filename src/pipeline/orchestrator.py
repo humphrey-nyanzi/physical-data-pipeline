@@ -82,14 +82,18 @@ logger = setup_logging()
 class PipelineExecutor:
     """Orchestrates full pipeline execution."""
 
-    def __init__(self, league: str):
+    def __init__(self, league: str, season: str = "2025/26", include_gk: bool = False):
         """
         Initialize pipeline executor.
 
         Args:
             league: 'fwsl' or 'upl'
+            season: Football season (e.g., '2025/26')
+            include_gk: Whether to include goalkeepers in main reports
         """
         self.league = league.lower()
+        self.season = season
+        self.include_gk = include_gk
         if self.league not in ["fwsl", "upl"]:
             raise ValueError(f"Invalid league: {league}. Must be 'fwsl' or 'upl'")
 
@@ -154,7 +158,7 @@ class PipelineExecutor:
 
         try:
             cleaned_df, output_path = cleaning.clean_pipeline(
-                raw_path=raw_path, league=self.league
+                raw_path=raw_path, league=self.league, season=self.season
             )
 
             elapsed = time.time() - start
@@ -282,6 +286,11 @@ class PipelineExecutor:
             Dictionary mapping club names to report paths
         """
         logger.info(f"[PHASE 4] Starting report generation")
+        
+        # Filter GK if needed
+        if not self.include_gk:
+            logger.info("[PHASE 4] Excluding goalkeepers from reports")
+            cleaned_df = cleaned_df[cleaned_df["general_position"] != "goalkeeper"].copy()
 
         start = time.time()
 
@@ -305,11 +314,11 @@ class PipelineExecutor:
                     doc = create_report_document(club)
 
                     # Add standardized sections
-                    add_introduction_section(doc, club)
+                    add_introduction_section(doc, club, season=self.season)
                     doc.add_page_break()
-                    add_methodology_section(doc)
+                    add_methodology_section(doc, season=self.season)
                     doc.add_page_break()
-                    add_key_concepts_section(doc)
+                    add_key_concepts_section(doc, season=self.season)
                     doc.add_page_break()
 
                     # Add data tables
@@ -363,9 +372,9 @@ class PipelineExecutor:
                     doc.add_page_break()
                     add_challenges_section(doc)
                     doc.add_page_break()
-                    add_future_plans_section(doc)
+                    add_future_plans_section(doc, season=self.season)
                     doc.add_page_break()
-                    add_conclusion_section(doc)
+                    add_conclusion_section(doc, season=self.season)
 
                     # Save report
                     report_path = save_document(doc, output_dir, f"{club}_report.docx")
@@ -475,7 +484,7 @@ class PipelineExecutor:
 
 
 def execute_pipeline(
-    league: str, raw_path: str, output_dir: str = "./output"
+    league: str, raw_path: str, output_dir: str = "./output", season: str = "2025/26", include_gk: bool = False
 ) -> Dict[str, Any]:
     """
     Execute full pipeline for specified league.
@@ -490,5 +499,5 @@ def execute_pipeline(
     Returns:
         Execution summary
     """
-    executor = PipelineExecutor(league)
+    executor = PipelineExecutor(league, season=season, include_gk=include_gk)
     return executor.execute_full_pipeline(raw_path, output_dir)

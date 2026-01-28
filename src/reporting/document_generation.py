@@ -15,12 +15,47 @@ Version: 1.0
 import os
 import math
 from io import BytesIO
-from typing import Optional
-
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pandas as pd
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches
+from src.config.speed_zones import get_speed_zones
+
+
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+def add_table_of_contents(doc: Document) -> None:
+    """
+    Insert a Table of Contents field into the document.
+    
+    Note: Word will require the user to "Update Field" upon opening the document 
+    to populate the TOC with actual page numbers and headings.
+    """
+    doc.add_heading("Table of Contents", level=1)
+    paragraph = doc.add_paragraph()
+    run = paragraph.add_run()
+    
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    
+    instrText = OxmlElement('w:instrText')
+    instrText.set(qn('xml:space'), 'preserve')
+    instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
+    
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'separate')
+    
+    fldChar3 = OxmlElement('w:fldChar')
+    fldChar3.set(qn('w:fldCharType'), 'end')
+    
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+    run._r.append(fldChar3)
+    
+    doc.add_page_break()
 
 
 def fmt_cell_value(val, float_fmt: str = "{:.2f}") -> str:
@@ -60,20 +95,52 @@ def add_dataframe_as_table(
     """
     table = doc.add_table(rows=1, cols=len(df.columns))
     table.style = style
+    table.autofit = False  # Enable manual sizing
+
+    # 1. Calculate column widths based on content
+    # Heuristic: ~0.1 inches per character for standard 10pt font
+    col_widths = []
+    for col in df.columns:
+        # Check header length
+        max_len = len(str(col))
+        # Check data lengths
+        if not df.empty:
+            col_data_max = df[col].astype(str).str.len().max()
+            max_len = max(max_len, col_data_max)
+        
+        # Min width 0.5 inches, Max width 3.0 inches (to force wrapping on very long text)
+        width = min(max(0.6, max_len * 0.11), 3.5)
+        col_widths.append(Inches(width))
 
     # Add header row
     hdr_cells = table.rows[0].cells
     for i, col in enumerate(df.columns):
         hdr_cells[i].text = str(col)
+        table.columns[i].width = col_widths[i]
+        hdr_cells[i].width = col_widths[i] # Required for some Word versions
+        
+        # Bold headers and center alignment for better looks
+        for paragraph in hdr_cells[i].paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in paragraph.runs:
+                run.bold = True
 
     # Add data rows
     for idx, row in df.iterrows():
         row_cells = table.add_row().cells
         for i, val in enumerate(row):
-            row_cells[i].text = fmt_cell_value(val)
+            text = fmt_cell_value(val)
+            row_cells[i].text = text
+            row_cells[i].width = col_widths[i]
+            
+            # Professional alignment: Center S/N and numeric columns
+            col_name = str(df.columns[i]).lower()
+            if col_name in ['s/n', 'rank', 's/no', 'match day', 'value'] or 'count' in col_name:
+                for paragraph in row_cells[i].paragraphs:
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
-def add_introduction_section(doc: Document, club_name: str) -> None:
+def add_introduction_section(doc: Document, club_name: str, season: str = "2025/26") -> None:
     """
     Add standardized Introduction section to report.
 
@@ -83,6 +150,7 @@ def add_introduction_section(doc: Document, club_name: str) -> None:
     Args:
         doc: python-docx Document object
         club_name: Name of club for personalization
+        season: Football season (e.g., '2025/26')
     """
     doc.add_heading("Introduction", level=1)
     doc.add_paragraph(
@@ -90,7 +158,7 @@ def add_introduction_section(doc: Document, club_name: str) -> None:
 
 On September 13 2024, The FUFA President, Hon. Eng Moses Hashim Magogo said "The data collected from the devices will not only benefit the individual clubs but will also be shared with the national team coaches" He further went on to say "This will enable the coaches to select players based on their performance data and tailor training sessions to meet the specific needs of the national team"
 
-The FUFA Research, Science and Technology (RST) has prepared this report focusing on {}'s physical performance during the 2024/25 season, leveraging Catapult tracking data to deliver actionable insights. The major objectives are to:
+The FUFA Research, Science and Technology (RST) has prepared this report focusing on {}'s physical performance during the {} season, leveraging Catapult tracking data to deliver actionable insights. The major objectives are to:
 • Quantify player workloads and intensity metrics
 • Identify performance trends and outliers
 • Inform training load management, injury prevention, and tactical planning
@@ -105,11 +173,11 @@ The report is organized into seven sections:
 • Challenges: Recurring issues such as inconsistent device usage, mislabelled sessions, failure to upload, mismanagement of equipment
 • Recommendations: Corrective measures including refresher training for Catapult operators, compliance to session naming protocols
 • FUFA Future Plans: Strategic initiatives to enhance data integration, reporting consistency, and long-term performance monitoring across all top-tier clubs
-""".format(club_name, club_name)
+""".format(club_name, season, club_name)
     )
 
 
-def add_methodology_section(doc: Document) -> None:
+def add_methodology_section(doc: Document, season: str = "2025/26") -> None:
     """
     Add standardized Methodology section to report.
 
@@ -117,11 +185,12 @@ def add_methodology_section(doc: Document) -> None:
 
     Args:
         doc: python-docx Document object
+        season: Football season (e.g., '2025/26')
     """
     doc.add_heading("Methodology", level=1)
     doc.add_paragraph("""
-This report is based on data collected using the Catapult GPS player tracking system during the 2024/25 football season. The data includes performance metrics such as total distance covered, sprint distance, work ratio, player load, session availability, top speed, accelerations, decelerations, energy, power plays, impacts, total actions, distance per minute.
-
+This report is based on data collected using the Catapult GPS player tracking system during the {} football season. The data includes performance metrics such as total distance covered, sprint distance, work ratio, player load, session availability, top speed, accelerations, decelerations, energy, power plays, impacts, total actions, distance per minute.
+""".format(season) + """
 Data was collected and uploaded by trained club staff immediately after match sessions. The FUFA Research, Science & Technology (RST) unit oversaw the data collection process, ensuring sessions were split by halves, correctly labelled, and uploaded within seventy-two (72) hours post-match. Where necessary, additional follow-up was done with the club operators to correct mislabelled sessions or fill in missing data, ensuring full coverage of match data.
 
 The rigorous data cleaning process involved removing duplicates, resolving inconsistencies in player-pod assignments, and verifying that each match session met the minimum completeness threshold (e.g., full ninety (90) minutes, sufficient number of tracked players). Any session failing these criteria was excluded from further analysis to maintain consistency.
@@ -129,8 +198,7 @@ The rigorous data cleaning process involved removing duplicates, resolving incon
 Once cleaned, data was aggregated by individual player and by club. Metrics were normalized to account for variations in match frequency, squad size, and overall data availability, and clubs with fewer than ten complete sessions were omitted from comparative analyses. All statistical summaries and visualizations were generated using Microsoft Excel, Power BI, R, and Python, following established RST workflows to ensure reliable, consistent benchmarks for technical review and long-term planning.
     """)
 
-
-def add_key_concepts_section(doc: Document) -> None:
+def add_key_concepts_section(doc: Document, season: str = "2025/26") -> None:
     """
     Add standardized Key Concepts and Definitions section to report.
 
@@ -138,6 +206,7 @@ def add_key_concepts_section(doc: Document) -> None:
 
     Args:
         doc: python-docx Document object
+        season: Football season (e.g., '2025/26')
     """
     doc.add_heading(
         "Key Concepts and Definitions in Physical Performance Analysis", level=1
@@ -233,29 +302,14 @@ Intensity: This refers to the rate or magnitude at which physical work is carrie
 
     doc.add_paragraph("Speed Zones")
 
+    # Get dynamic speed zones from config
+    zones_dict = get_speed_zones(season)
+    
     zones_data = {
-        "Zone": ["Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5"],
-        "Threshold (km/h)": [
-            "0 – 3.6",
-            "3.61 – 10.8",
-            "10.81 – 18",
-            "18.1 – 25.2",
-            "25.21 - 43.2",
-        ],
-        "Intensity": [
-            "Very Low",
-            "Low to Moderate",
-            "Moderate to High",
-            "High",
-            "Maximal",
-        ],
-        "Descriptor": [
-            "Standing, Walking at Recovery Pace",
-            "Jogging and Easy Running",
-            "Running",
-            "High Speed Running",
-            "Sprinting",
-        ],
+        "Zone": list(zones_dict.keys()),
+        "Threshold (km/h)": [v["range"] for v in zones_dict.values()],
+        "Intensity": [v["intensity"] for v in zones_dict.values()],
+        "Descriptor": [v["descriptor"] for v in zones_dict.values()],
     }
 
     zones_df = pd.DataFrame(zones_data)
@@ -289,7 +343,7 @@ The challenges are outlined below:
     )
 
 
-def add_future_plans_section(doc: Document) -> None:
+def add_future_plans_section(doc: Document, season: str = "2025/26") -> None:
     """
     Add standardized FUFA Future Plans section to report.
 
@@ -297,11 +351,12 @@ def add_future_plans_section(doc: Document) -> None:
 
     Args:
         doc: python-docx Document object
+        season: Football season (e.g., '2025/26')
     """
     doc.add_heading("FUFA Future Plans", level=1)
     doc.add_paragraph(
-        """This section outlines the strategic initiatives FUFA intends to roll out to maximize the impact of Catapult data across Uganda's top tier leagues. These federation-led actions build on the 2024/25 season insights and are designed to standardize workflows, deepen analysis, and support both club staff and players. For club-specific implementation advice or technical assistance, please contact the FUFA Research, Science and Technology (RST) unit.
-
+        """This section outlines the strategic initiatives FUFA intends to roll out to maximize the impact of Catapult data across Uganda's top tier leagues. These federation-led actions build on the {} season insights and are designed to standardize workflows, deepen analysis, and support both club staff and players. For club-specific implementation advice or technical assistance, please contact the FUFA Research, Science and Technology (RST) unit.
+""".format(season) + """
 1. Conduct regular visits to the clubs to monitor equipment usage and share club specific insights.
 2. Organise regular training workshops for club performance staff on Catapult device management, data procedures and software analytics to ensure consistent, high-quality data capture.
 3. Leverage catapult data to inform nutritional guidance, tailoring macronutrient ratios to individual training demands and recovery needs.
@@ -312,7 +367,7 @@ def add_future_plans_section(doc: Document) -> None:
     )
 
 
-def add_conclusion_section(doc: Document) -> None:
+def add_conclusion_section(doc: Document, season: str = "2025/26") -> None:
     """
     Add standardized Conclusion section to report.
 
@@ -320,11 +375,12 @@ def add_conclusion_section(doc: Document) -> None:
 
     Args:
         doc: python-docx Document object
+        season: Football season (e.g., '2025/26')
     """
     doc.add_heading("Conclusion", level=1)
     doc.add_paragraph(
-        """We extend our sincere thanks to every coach, performance staff member and analyst for their dedication in collecting and interpreting Catapult data this season. Your hard work has laid a solid foundation for evidence-based decision-making across fitness, recovery and match preparation.
-
+        """We extend our sincere thanks to every coach, performance staff member and analyst for their dedication in collecting and interpreting Catapult data during the {} season. Your hard work has laid a solid foundation for evidence-based decision-making across fitness, recovery and match preparation.
+    """.format(season) + """
 All Catapult outputs and associated player information will be handled in strict accordance with the FUFA data privacy and security policy, ensuring confidentiality, ethical use and compliant storage. This protocol safeguards both individual rights and the integrity of our performance analysis.
 
 As we move into the next season, we look forward to your feedback and stand ready to support your club through FUFA's Research, Science and Technology unit. You can reach us via email on fufa.rst@gmail.com
@@ -342,9 +398,26 @@ def embed_matplotlib_figure(doc: Document, fig, width_inches: float = 6.0) -> No
         width_inches: Width of embedded image (default: 6.0)
     """
     img_stream = BytesIO()
-    fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=100)
-    img_stream.seek(0)
-    doc.add_picture(img_stream, width=Inches(width_inches))
+    try:
+        # Check if figure is empty (no axes)
+        if not fig.axes:
+            # Create a dummy figure with text
+            import matplotlib.pyplot as plt
+            dummy_fig, ax = plt.subplots(figsize=(6, 2))
+            ax.text(0.5, 0.5, "No data available for visualization", 
+                   ha='center', va='center', fontsize=12)
+            ax.axis('off')
+            dummy_fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=100)
+            plt.close(dummy_fig)
+        else:
+            fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=100)
+            
+        img_stream.seek(0)
+        doc.add_picture(img_stream, width=Inches(width_inches))
+    except Exception as e:
+        print(f"Error embedding figure: {e}")
+        # Insert a placeholder text in doc instead
+        doc.add_paragraph(f"[Visualisation failed: {e}]")
 
 
 def embed_matplotlib_axis(doc: Document, ax, width_inches: float = 6.0) -> None:

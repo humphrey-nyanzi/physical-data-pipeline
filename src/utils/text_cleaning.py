@@ -8,6 +8,7 @@ and other text fields to ensure data quality and consistency.
 import re
 import pandas as pd
 from typing import List, Optional, Tuple
+import difflib
 
 
 def clean_text(s: str) -> str:
@@ -72,7 +73,7 @@ def normalize_name(name: str) -> str:
     return name
 
 
-def best_match(name: str, club_list: List[str], min_score: float = 0.6) -> str:
+def best_match(name: str, club_list: List[str], min_score: float = 0.6, return_original: bool = True) -> Optional[str]:
     """
     Find the best matching club name from a list using fuzzy matching.
 
@@ -86,20 +87,11 @@ def best_match(name: str, club_list: List[str], min_score: float = 0.6) -> str:
         club_list (List[str]): List of standard club names to match against
         min_score (float): Minimum similarity score (0-1) for token overlap.
                           Default 0.6 is conservative; increase for stricter matching.
+        return_original (bool): If True, returns original name if no match found.
+                               If False, returns None.
 
     Returns:
-        str: Best matching club name from club_list, or original name if no good match
-
-    Example:
-        >>> clubs = ['Kampala Queens FC', 'She Maroons FC', 'KCCA FC']
-        >>> best_match('Kampala Queens', clubs)
-        'Kampala Queens FC'
-
-        >>> best_match('Kcca', clubs)
-        'KCCA FC'
-
-        >>> best_match('Unknown Club', clubs)
-        'Unknown Club'  # No match above threshold
+        Optional[str]: Best matching club name, or (original name OR None) if no good match.
     """
     name_clean = name.strip().lower().replace(".", "")
     norm_name = normalize_name(name_clean)
@@ -115,7 +107,14 @@ def best_match(name: str, club_list: List[str], min_score: float = 0.6) -> str:
         if norm_name in club_norm or club_norm in norm_name:
             return club
 
-    # 3. Token overlap scoring
+    # 3. Standard Library Fuzzy Matching (difflib)
+    # This captures typos and close string resemblances better than token overlap
+    # We use a slightly adjusted cutoff based on min_score
+    matches = difflib.get_close_matches(name.title(), club_list, n=1, cutoff=min_score)
+    if matches:
+        return matches[0]
+
+    # 4. Token overlap scoring (Fallback for multi-word misalignments)
     # Split on spaces/punctuation, score based on matching tokens
     name_tokens = set(name_clean.split())
     best = None
@@ -133,7 +132,10 @@ def best_match(name: str, club_list: List[str], min_score: float = 0.6) -> str:
             best = club
             best_score = score
 
-    return best if best_score >= min_score else name
+    if best_score >= min_score:
+        return best
+    
+    return name if return_original else None
 
 
 def normalize_club_names(

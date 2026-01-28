@@ -7,13 +7,14 @@ class ReportStyles:
     FONT_NAME = 'Aptos Display'
     
     # Font Sizes
-    FONT_SIZE_TITLE = Pt(16)
-    FONT_SIZE_HEADING = Pt(14)
-    FONT_SIZE_NORMAL = Pt(12)
+    FONT_SIZE_TITLE = Pt(18)
+    FONT_SIZE_HEADING1 = Pt(14)
+    FONT_SIZE_HEADING2 = Pt(12)
+    FONT_SIZE_NORMAL = Pt(11)
     
     # Colors
     COLOR_BLACK = RGBColor(0, 0, 0)
-    COLOR_RED = RGBColor(255, 0, 0)
+    COLOR_RED = RGBColor(192, 0, 0)
     
     # Table Styles
     TABLE_STYLE = 'Table Grid'
@@ -26,18 +27,35 @@ class ReportStyles:
             font = style.font
             font.name = cls.FONT_NAME
             font.size = cls.FONT_SIZE_NORMAL
+            
+            # Line spacing
+            style.paragraph_format.line_spacing = 1.15
+            style.paragraph_format.space_after = Pt(10)
 
     @classmethod
     def apply_heading_styles(cls, doc):
-        """Apply heading styles to document."""
-        for level in ['Heading 1', 'Heading 2']:
+        # Mapping level to config
+        heading_configs = {
+            'Heading 1': {'size': cls.FONT_SIZE_HEADING1, 'bold': True},
+            'Heading 2': {'size': cls.FONT_SIZE_HEADING2, 'bold': True},
+            'Heading 3': {'size': cls.FONT_SIZE_HEADING2, 'bold': False, 'italic': True},
+        }
+
+        for level, config in heading_configs.items():
             if level in doc.styles:
                 h_style = doc.styles[level]
                 h_font = h_style.font
                 h_font.name = cls.FONT_NAME
-                h_font.size = cls.FONT_SIZE_HEADING
+                h_font.size = config['size']
                 h_font.color.rgb = cls.COLOR_BLACK
-                h_font.bold = True
+                h_font.bold = config['bold']
+                if 'italic' in config:
+                    h_font.italic = config['italic']
+                
+                # Headings spacing
+                h_style.paragraph_format.space_before = Pt(14)
+                h_style.paragraph_format.space_after = Pt(6)
+                h_style.paragraph_format.line_spacing = 1.0
                 
         if 'Title' in doc.styles:
             title_style = doc.styles['Title']
@@ -45,3 +63,5 @@ class ReportStyles:
             title_style.font.size = cls.FONT_SIZE_TITLE
             title_style.font.color.rgb = cls.COLOR_BLACK
             title_style.font.bold = True
+            title_style.paragraph_format.alignment = 1 # CENTER
+            title_style.paragraph_format.space_after = Pt(24)
