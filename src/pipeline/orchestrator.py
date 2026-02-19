@@ -1,6 +1,22 @@
 """
 Pipeline Orchestrator - Master Coordination Module
 
+⚠️  DEPRECATION NOTICE ⚠️
+This module is DEPRECATED. Use the new modular pipeline pattern instead:
+
+  OLD WAY (deprecated):
+    from src.pipeline.orchestrator import PipelineExecutor
+    executor = PipelineExecutor(league='upl')
+    executor.execute_full_pipeline('/path/to/data.csv')
+
+  NEW WAY (recommended):
+    python scripts/match_analysis.py full --league upl --input /path/to/data.csv
+
+The new src/pipelines/full.py:FullPipeline provides the same functionality
+with better modularity, extensibility, and CLI integration.
+
+---
+
 Coordinates all phases of the Match-Analysis pipeline:
   Phase 1: Configuration & Utilities (config, utils)
   Phase 2: Data Cleaning (raw CSV → cleaned CSV)
@@ -16,7 +32,7 @@ This module provides functions to:
   5. Generate performance metrics
 
 Author: FUFA Research, Science & Technology Unit
-Version: 1.0
+Version: 1.0 (DEPRECATED - see FullPipeline migration)
 """
 
 import os

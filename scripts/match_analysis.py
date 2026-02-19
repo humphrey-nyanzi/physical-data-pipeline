@@ -21,6 +21,7 @@ from typing import Dict, Type
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.pipelines.base import AnalysisPipeline
+from src.pipelines.full import FullPipeline
 from src.pipelines.weekly import WeeklyPipeline
 from src.pipelines.season import SeasonPipeline
 
@@ -32,6 +33,7 @@ def register_pipeline(pipeline_cls: Type[AnalysisPipeline]):
     """Register a pipeline class."""
     PIPELINE_REGISTRY[pipeline_cls(argparse.Namespace()).name] = pipeline_cls
 
+register_pipeline(FullPipeline)
 register_pipeline(WeeklyPipeline)
 register_pipeline(SeasonPipeline)
 

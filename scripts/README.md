@@ -14,13 +14,15 @@ python scripts/match_analysis.py <command> [options]
 
 ### Available Commands
 
-#### 1. Weekly Report (`weekly`)
+#### 1. Full Pipeline (`full`) - **RECOMMENDED**
 
-Generates GPS reports for a specific matchday.
+Executes the complete 4-phase workflow: Configuration → Data Cleaning → Analysis → Report Generation
 
 ```bash
-python scripts/match_analysis.py weekly --md 11
+python scripts/match_analysis.py full --league upl --input data/raw/all_catapult_data_16_Jul_25.csv --output Output/
 ```
+
+This is the primary way to process raw Catapult data end-to-end and generate club reports.
 
 #### 2. Season Report (`season`)
 
@@ -30,13 +32,37 @@ Generates full season analysis and individual club reports.
 python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
 ```
 
+#### 3. Weekly Report (`weekly`)
+
+Generates GPS reports for a specific matchday.
+
+```bash
+python scripts/match_analysis.py weekly --md 11
+```
+
 ### Options
 
 Run any command with `--help` to see all available options:
 
 ```bash
-python scripts/match_analysis.py weekly --help
+python scripts/match_analysis.py full --help
 python scripts/match_analysis.py season --help
+python scripts/match_analysis.py weekly --help
+```
+
+## Deprecated Code
+
+**Legacy Pattern (DO NOT USE):**
+```python
+# Old way - DEPRECATED
+from src.pipeline.orchestrator import PipelineExecutor
+executor = PipelineExecutor(league='upl')
+executor.execute_full_pipeline('data.csv', 'output/')
+```
+
+Use the CLI instead:
+```bash
+python scripts/match_analysis.py full --league upl --input data.csv
 ```
 
 ## Legacy Scripts
@@ -45,4 +71,5 @@ Standalone scripts like `run_full_analysis.py`, `generate_reports.py`, etc., hav
 
 ---
 **Organization:** FUFA-RST
-**Last Updated:** January 21, 2026
+**Last Updated:** February 19, 2026
+**Migration Status:** Legacy orchestrator scheduled for removal after CLI deprecation period

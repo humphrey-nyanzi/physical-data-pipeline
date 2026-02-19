@@ -44,7 +44,25 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 
 ### Running the Pipeline
 
-**Option 1: Interactive Notebook (Recommended for new users)**
+**Option 1: Unified CLI (Recommended - Production Ready)**
+
+```bash
+# Full 4-phase pipeline (Config → Clean → Analyze → Report)
+python scripts/match_analysis.py full --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
+
+# Season analysis with league reports
+python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
+
+# Weekly GPS report
+python scripts/match_analysis.py weekly --md 11
+```
+
+All available options:
+```bash
+python scripts/match_analysis.py <command> --help
+```
+
+**Option 2: Interactive Notebook (For exploration and learning)**
 
 ```bash
 jupyter notebook main_pipeline.ipynb
@@ -55,16 +73,6 @@ This opens an interactive notebook where you can:
 - Select league (FWSL or UPL)
 - Run analysis step-by-step
 - View outputs and visualizations immediately
-
-**Option 2: Unified CLI (Recommended for production/batch processing)**
-
-```bash
-# Weekly GPS Report
-python scripts/match_analysis.py weekly --md 11
-
-# Season/Half-Season Report
-python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
-```
 
 ---
 
@@ -120,10 +128,15 @@ Match-Analysis/
 │       ├── styling.py            # Word document styling
 │   └── normalization.py      # Club/position mapping
 │
-├── src/pipelines/                # NEW: Pipeline Orchestrators
+├── src/pipelines/                # Pipeline Orchestrators (Active)
 │   ├── base.py                   # Abstract base class for pipelines
+│   ├── full.py                   # Complete 4-phase workflow
 │   ├── weekly.py                 # Weekly report pipeline logic
 │   └── season.py                 # Season analysis pipeline logic
+│
+├── src/pipeline/                 # DEPRECATED (legacy - do not use)
+│   ├── orchestrator.py           # [Legacy code - scheduled for removal]
+│   └── __init__.py               # [Exports deprecated classes]
 │
 ├── notebooks/                    # Interactive analysis workflows
 │   ├── main_pipeline.ipynb       # Entry point (league selection)
