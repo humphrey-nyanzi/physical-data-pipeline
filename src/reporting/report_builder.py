@@ -14,7 +14,7 @@ Version: 1.0
 
 import pandas as pd
 import numpy as np
-from typing import Tuple, Dict, List, Optional
+from typing import Tuple, Dict, List
 from src.config.speed_zones import get_speed_zones
 
 
@@ -129,14 +129,20 @@ def get_metric_summary(
     Returns:
         DataFrame with columns: Metric, Total, Max, Min, Mean, Std Dev, Range
     """
-    all_metrics = volume_metrics + intensity_metrics
+    # Filter for valid metrics present in dataframe
+    valid_vol = [m for m in volume_metrics if m in club_df.columns]
+    valid_int = [m for m in intensity_metrics if m in club_df.columns]
+    all_metrics = valid_vol + valid_int
+
+    if not all_metrics:
+        return pd.DataFrame()
 
     # Compute stats
     summary = club_df[all_metrics].agg(["sum", "max", "min", "mean", "std"])
     summary = summary.T
     
     # Null out 'sum' for intensity metrics
-    summary.loc[intensity_metrics, "sum"] = np.nan
+    summary.loc[valid_int, "sum"] = np.nan
     
     summary = summary.reset_index().rename(columns={"index": "Metric"})
     summary["Metric"] = summary["Metric"].map(metric_display_names).fillna(summary["Metric"])
@@ -152,7 +158,6 @@ def get_metric_summary(
     )
 
     summary = summary[["Metric", "Total", "Max", "Min", "Mean", "Std Dev"]]
-    summary["Range"] = summary["Max"] - summary["Min"]
 
     return summary.round(2)
 
@@ -175,7 +180,8 @@ def get_top_players_by_metric(
     """
     top_players = []
 
-    for metric in metrics:
+    valid_metrics = [m for m in metrics if m in club_df.columns]
+    for metric in valid_metrics:
         idx = club_df[metric].idxmax()
         row = club_df.loc[idx]
         top_players.append(
@@ -224,7 +230,12 @@ def get_average_metrics_by_position(
     Returns:
         DataFrame with metrics as rows and positions as columns
     """
-    all_metrics = volume_metrics + intensity_metrics
+    valid_vol = [m for m in volume_metrics if m in club_df.columns]
+    valid_int = [m for m in intensity_metrics if m in club_df.columns]
+    all_metrics = valid_vol + valid_int
+
+    if not all_metrics:
+        return pd.DataFrame()
 
     # Group by position and compute mean
     avg_by_position = (
@@ -260,9 +271,13 @@ def get_total_metrics_by_position(
     Returns:
         DataFrame with metrics as rows and positions as columns
     """
+    valid_vol = [m for m in volume_metrics if m in club_df.columns]
+    if not valid_vol:
+        return pd.DataFrame()
+
     # Group by position and compute sum
     total_by_position = (
-        club_df.groupby("general_position")[volume_metrics].sum().round(2)
+        club_df.groupby("general_position")[valid_vol].sum().round(2)
     )
 
     # Transpose
@@ -299,7 +314,12 @@ def get_average_metrics_per_matchday(
             - display_df: Renamed columns, formatted for tables
             - plot_df: Raw values, matches matchday_order
     """
-    all_metrics = volume_metrics + intensity_metrics
+    valid_vol = [m for m in volume_metrics if m in club_df.columns]
+    valid_int = [m for m in intensity_metrics if m in club_df.columns]
+    all_metrics = valid_vol + valid_int
+
+    if not all_metrics:
+        return pd.DataFrame(), pd.DataFrame()
 
     avg_per_matchday = club_df.groupby("match_day")[all_metrics].mean().reset_index()
     avg_per_matchday["match_day"] = pd.Categorical(
@@ -348,7 +368,12 @@ def club_vs_season_comparison(
     Returns:
         DataFrame with columns: Metric, Club Average, Season Average, % Difference
     """
-    all_metrics = volume_metrics + intensity_metrics
+    valid_vol = [m for m in volume_metrics if m in club_df.columns and m in season_df.columns]
+    valid_int = [m for m in intensity_metrics if m in club_df.columns and m in season_df.columns]
+    all_metrics = valid_vol + valid_int
+
+    if not all_metrics:
+        return pd.DataFrame()
 
     club_avg = club_df[all_metrics].mean().to_frame(name="Club Average")
     season_avg = season_df[all_metrics].mean().to_frame(name="Season Average")
@@ -393,7 +418,12 @@ def positional_comparison_vs_season(
     Returns:
         DataFrame structured as: Index = Metric, Columns = Positions (Club/Season/% Diff for each)
     """
-    all_metrics = volume_metrics + intensity_metrics
+    valid_vol = [m for m in volume_metrics if m in club_df.columns and m in season_df.columns]
+    valid_int = [m for m in intensity_metrics if m in club_df.columns and m in season_df.columns]
+    all_metrics = valid_vol + valid_int
+
+    if not all_metrics:
+        return pd.DataFrame()
 
     club_pos_avg = (
         club_df.groupby("general_position")[all_metrics].mean().add_prefix("Club_")
@@ -507,12 +537,6 @@ def get_speed_zone_breakdown(
         logger.warning(f"Columns containing 'zone': {zone_cols_debug}")
         
         return pd.DataFrame(), pd.DataFrame()
-    else:
-        # Log successful discovery
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Found {len(speed_zone_cols)} speed zone columns: {speed_zone_cols}")
-
     # Group by position and sum distances
     zone_by_position = club_df.groupby("general_position")[speed_zone_cols].sum()
 

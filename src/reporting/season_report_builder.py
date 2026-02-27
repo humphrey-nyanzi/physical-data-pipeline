@@ -9,11 +9,15 @@ import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH # Unused, but leaving if needed for table alignment later? Actually Ruff says unused.
+# Removing it:
+
 
 from ..analysis import season_analysis
 from ..analysis import visualizations
 from . import document_generation as doc_gen
+from . import report_builder
+from ..config import constants
 from src.config.styles import ReportStyles
 import yaml
 from pathlib import Path
@@ -40,10 +44,7 @@ class SeasonReportBuilder:
         self.gk_mode = gk_mode
         
         # Load config
-        self.config_path = Path(__file__).parents[2] / "scripts" / "config" / "analysis_config.yaml"
-        # Use simpler relative path if possible or keep as is? 
-        # Path(__file__).parents[2] is src/.. -> root?
-        # scripts/config is relative to root.
+        self.config_path = Path(__file__).parents[1] / "config" / "analysis_config.yaml"
         
         # Safe loading
         if self.config_path.exists():
@@ -65,14 +66,22 @@ class SeasonReportBuilder:
         logger.info(f"Building {self.timeframe} report for {self.league} (suffix: {suffix})...")
         
         # 1. Title Page
+        assets_dir = Path(__file__).parent / "assets"
         base_title = f"{self.league.upper()} {self.timeframe.replace('_', ' ').title()} Report"
-        title = f"Goalkeeper {base_title}" if self.gk_mode else base_title
-        self._add_title_page(title)
+        display_title = f"Goalkeeper {base_title}" if self.gk_mode else base_title
+        
+        doc_gen.add_title_page(
+            self.doc, 
+            title=display_title,
+            subtitle=f"{self.league} | {self.season} Season",
+            logo_path=str(assets_dir / "fufa_logo.png")
+        )
         
         # Insert Table of Contents
         doc_gen.add_table_of_contents(self.doc)
         
         # 2. Introduction
+        doc_gen.add_branded_header(self.doc, "Introduction", icon_path=None)
         self._add_intro_section()
         
         # 3. Usage Analysis
@@ -91,25 +100,8 @@ class SeasonReportBuilder:
         logger.info(f"Report saved to {output_path}")
         return output_path
 
-    def _add_title_page(self, title: str):
-        """Create a custom title page."""
-        self.doc.add_paragraph('FUFA Research, Science and Technology Unit', style='Title')
-        
-        self.doc.add_paragraph("\n" * 4)
-        
-        p = self.doc.add_paragraph(style='Title')
-        run = p.add_run(f"{title}\nSeason: {self.season}")
-        run.bold = True
-        
-        self.doc.add_paragraph("\n" * 4)
-        
-        p = self.doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.add_run(f"Generated on: {pd.Timestamp.now().strftime('%B %d, %Y')}")
-        self.doc.add_page_break()
 
     def _add_intro_section(self):
-        self.doc.add_heading("1. Introduction", level=1)
         self.doc.add_paragraph(
             f"This report presents a comprehensive analysis of the {self.league.upper()} "
             f"competitions for the {self.season} {self.timeframe.replace('_', ' ')}. "
@@ -125,7 +117,7 @@ class SeasonReportBuilder:
     # USAGE SECTION
     # ========================================================================
     def _add_usage_section(self):
-        self.doc.add_heading("2. Usage Analysis", level=1)
+        doc_gen.add_branded_header(self.doc, "Usage Analysis", icon_path=None)
         self.doc.add_paragraph(
             "This section outlines the extent of data collection, highlighting club participation "
             "and consistency across matchdays."
@@ -135,10 +127,11 @@ class SeasonReportBuilder:
         
         # 2.1 Unique Players per Club
         self.doc.add_heading("2.1 Player Participation per Club", level=2)
-        top_club = usage_stats['unique_players_per_club'].iloc[0]
-        doc_gen.add_dataframe_as_table(self.doc, usage_stats['unique_players_per_club'])
+        unique_players = usage_stats['unique_players_per_club'].rename(columns=constants.GENERAL_DISPLAY_NAMES)
+        top_club = unique_players.iloc[0]
+        doc_gen.add_dataframe_as_table(self.doc, unique_players, caption="Unique Players Analyzed per Club")
         self.doc.add_paragraph(
-            f"{top_club['club_for']} had the highest number({top_club['unique_players']}) of unique players analyzed, "
+            f"{top_club['Club']} had the highest number({top_club['Number of Players']}) of unique players analyzed, "
             "indicating significant squad rotation or broad data capture."
         )
         
@@ -149,14 +142,14 @@ class SeasonReportBuilder:
         fig = visualizations.plot_league_trend(
             usage_stats['players_per_md_trend'], 'total_players', 'Total Unique Players Captured'
         )
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Total Unique Players Captured per Matchday")
         plt.close(fig)
         
         # Plot Clubs per MD
         fig = visualizations.plot_league_trend(
             usage_stats['clubs_per_md_trend'], 'total_clubs', 'Total Clubs Submitting Data'
         )
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Total Clubs Submitting Data per Matchday")
         plt.close(fig)
         
         self.doc.add_paragraph(
@@ -171,14 +164,14 @@ class SeasonReportBuilder:
         )
         grid_df = season_analysis.get_coverage_grid(self.df)
         fig = visualizations.plot_coverage_heatmap(grid_df)
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Matchday Data Coverage Grid (Green = Data Available)")
         plt.close(fig)
 
     # ========================================================================
     # PERFORMANCE SECTION
     # ========================================================================
     def _add_performance_section(self):
-        self.doc.add_heading("3. Performance Analysis", level=1)
+        doc_gen.add_branded_header(self.doc, "Performance Analysis", icon_path=None)
         self.doc.add_paragraph(
             "This section analyzes the physical output of players, categorized by volume "
             "(total work done) and intensity (rate of work)."
@@ -192,33 +185,35 @@ class SeasonReportBuilder:
         
         # Distance Histogram
         fig = visualizations.plot_metric_histogram(self.df, 'distance_km', 'Total Distance (km)')
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Distribution of Total Distance (km) across all sessions")
         plt.close(fig)
         
         # Player Load Histogram
         fig = visualizations.plot_metric_histogram(self.df, 'player_load', 'Player Load')
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Distribution of Player Load across all sessions")
         plt.close(fig)
         
         # 3.2 Aggregated Metrics
         self.doc.add_heading("3.2 League Averages", level=2)
         self.doc.add_heading("Volume Metrics", level=3)
-        doc_gen.add_dataframe_as_table(self.doc, perf_stats['volume'].round(2))
+        vol_avg = perf_stats['volume'].copy()
+        vol_avg['Metric'] = vol_avg['Metric'].map(constants.METRIC_DISPLAY_NAMES).fillna(vol_avg['Metric'])
+        doc_gen.add_dataframe_as_table(self.doc, vol_avg.round(2), caption="League-wide Volume Metrics Averages")
         
         self.doc.add_heading("Intensity Metrics", level=3)
-        doc_gen.add_dataframe_as_table(self.doc, perf_stats['intensity'].round(2))
+        int_avg = perf_stats['intensity'].copy()
+        int_avg['Metric'] = int_avg['Metric'].map(constants.METRIC_DISPLAY_NAMES).fillna(int_avg['Metric'])
+        doc_gen.add_dataframe_as_table(self.doc, int_avg.round(2), caption="League-wide Intensity Metrics Averages")
         
         # 3.3 Positional Breakdown
         self.doc.add_heading("3.3 League Averages by Position", level=2)
-        from . import report_builder
-        from ..config import constants
         pos_stats = report_builder.get_average_metrics_by_position(
             self.df, 
             constants.VOLUME_METRICS, 
             constants.INTENSITY_METRICS, 
             constants.METRIC_DISPLAY_NAMES
-        )
-        doc_gen.add_dataframe_as_table(self.doc, pos_stats.round(2))
+        ).rename(columns=constants.GENERAL_DISPLAY_NAMES)
+        doc_gen.add_dataframe_as_table(self.doc, pos_stats.round(2), caption="League-wide Averages by Playing Position")
         
         # 3.4 Club Level Comparisons
         self.doc.add_heading("3.4 Club Level Comparisons", level=2)
@@ -226,13 +221,13 @@ class SeasonReportBuilder:
         
         if 'volume' in club_stats:
             self.doc.add_heading("Volume Metrics by Club", level=3)
-            vol_df = club_stats['volume'].rename(columns=constants.METRIC_DISPLAY_NAMES).reset_index().rename(columns={'club_for': 'Club'})
-            doc_gen.add_dataframe_as_table(self.doc, vol_df.round(2))
+            vol_df = club_stats['volume'].rename(columns=constants.METRIC_DISPLAY_NAMES).reset_index().rename(columns=constants.GENERAL_DISPLAY_NAMES)
+            doc_gen.add_dataframe_as_table(self.doc, vol_df.round(2), caption="Volume Metrics Averages by Club")
             
         if 'intensity' in club_stats:
             self.doc.add_heading("Intensity Metrics by Club", level=3)
-            int_df = club_stats['intensity'].rename(columns=constants.METRIC_DISPLAY_NAMES).reset_index().rename(columns={'club_for': 'Club'})
-            doc_gen.add_dataframe_as_table(self.doc, int_df.round(2))
+            int_df = club_stats['intensity'].rename(columns=constants.METRIC_DISPLAY_NAMES).reset_index().rename(columns=constants.GENERAL_DISPLAY_NAMES)
+            doc_gen.add_dataframe_as_table(self.doc, int_df.round(2), caption="Intensity Metrics Averages by Club")
         
         # 3.5 Contextual Analysis
         self.doc.add_heading("3.5 Contextual Analysis", level=2)
@@ -241,18 +236,20 @@ class SeasonReportBuilder:
         if 'location' in context_stats:
             self.doc.add_heading("Home vs Away", level=3)
             # Plot specific metric comparison, e.g. PL
+            metric_label = constants.METRIC_DISPLAY_NAMES.get('player_load', 'Player Load')
             fig = visualizations.plot_context_comparison(
-                context_stats['location'], 'player_load', 'Player Load', 'Location'
+                context_stats['location'], 'player_load', metric_label, 'Location'
             )
-            doc_gen.embed_matplotlib_figure(self.doc, fig)
+            doc_gen.embed_matplotlib_figure(self.doc, fig, caption=f"Comparison of {metric_label} (Home vs Away)")
             plt.close(fig)
             
         if 'result' in context_stats:
             self.doc.add_heading("Match Result (Win/Draw/Loss)", level=3)
+            metric_label = constants.METRIC_DISPLAY_NAMES.get('distance_km', 'Distance (km)')
             fig = visualizations.plot_context_comparison(
-                context_stats['result'], 'distance_km', 'Distance (km)', 'Result'
+                context_stats['result'], 'distance_km', metric_label, 'Result'
             )
-            doc_gen.embed_matplotlib_figure(self.doc, fig)
+            doc_gen.embed_matplotlib_figure(self.doc, fig, caption=f"Comparison of {metric_label} covered by Match Result")
             plt.close(fig)
             
         # 3.6 Rolling Trends
@@ -264,9 +261,11 @@ class SeasonReportBuilder:
             'top_speed_kmh': 'Top Speed (km/h)',
             'work_ratio': 'Work Ratio'
         }
+        doc_gen.set_landscape(self.doc)
         fig = visualizations.plot_rolling_trend_grid(self.df, metrics_map)
-        doc_gen.embed_matplotlib_figure(self.doc, fig)
+        doc_gen.embed_matplotlib_figure(self.doc, fig, width_inches=9.0, caption="Seasonal Performance Trends (3-Match Rolling Average)")
         plt.close(fig)
+        doc_gen.set_portrait(self.doc)
         
         # 3.7 Speed Zones
         self.doc.add_heading("3.7 Speed Zone Analysis", level=2)
@@ -276,7 +275,7 @@ class SeasonReportBuilder:
             fig = visualizations.plot_speed_zones_stacked(
                 sz_stats['dist_pct'], "Distance Distribution by Speed Zone"
             )
-            doc_gen.embed_matplotlib_figure(self.doc, fig)
+            doc_gen.embed_matplotlib_figure(self.doc, fig, caption="Distance Distribution by Speed Zone across the League")
             plt.close(fig)
             
         self._add_record_breakers()
@@ -292,12 +291,16 @@ class SeasonReportBuilder:
         
         for metric, df in records.items():
             if not df.empty:
+                display_metric = constants.METRIC_DISPLAY_NAMES.get(metric, metric)
                 top_p = df.iloc[0]
                 self.doc.add_paragraph(
-                    f"Highest {metric}: {top_p['p_name']} ({top_p['club_for']}) - {top_p[metric]:.2f}"
+                    f"Highest {display_metric}: {top_p['p_name']} ({top_p['club_for']}) - {top_p[metric]:.2f}"
                 )
-                safe_df = df.copy() # Avoid modification
-                doc_gen.add_dataframe_as_table(self.doc, safe_df.round(2))
+                safe_df = df.copy().rename(columns={
+                    **constants.GENERAL_DISPLAY_NAMES,
+                    metric: display_metric
+                })
+                doc_gen.add_dataframe_as_table(self.doc, safe_df.round(2), caption=f"Top 5 Performers for {display_metric}")
 
     def _add_conclusion_section(self):
         doc_gen.add_conclusion_section(self.doc, season=self.season)

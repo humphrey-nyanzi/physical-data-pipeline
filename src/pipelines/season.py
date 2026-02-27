@@ -91,7 +91,8 @@ class SeasonPipeline(AnalysisPipeline):
                 cleaned_df, clean_output_path = cleaning.clean_pipeline(
                     raw_path=str(raw_path), 
                     league=league,
-                    season=self.args.season
+                    season=self.args.season,
+                    include_gk=self.args.gk
                 )
                 self.log(f"Cleaning complete. Rows: {len(cleaned_df)}")
                 
@@ -116,8 +117,12 @@ class SeasonPipeline(AnalysisPipeline):
                 return False
 
         # --- Phase 2: Filtering ---
-        df_field = filter_by_position(cleaned_df, "field")
-        df_gk = filter_by_position(cleaned_df, "gk") if self.args.gk else pd.DataFrame()
+        # Define field positions (all except goalkeeper)
+        field_positions = ["defender", "midfielder", "forward"]
+        df_field = filter_by_position(cleaned_df, field_positions)
+        
+        # Define GK positions
+        df_gk = filter_by_position(cleaned_df, ["goalkeeper"]) if self.args.gk else pd.DataFrame()
 
         # --- Phase 3: Reporting ---
         self.log("Phase 3: Generating Reports...")

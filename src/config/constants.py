@@ -54,6 +54,7 @@ CORE_METRICS = [
     "max_deceleration_mss",
     "total_accelerations",
     "total_decelerations",
+    "total_actions",
     "acc_counts_per_min",
     "dec_counts_per_min",
     # Speed zone distance columns (required for speed zone breakdown analysis)
@@ -62,6 +63,16 @@ CORE_METRICS = [
     "distance_in_speed_zone_3_km",
     "distance_in_speed_zone_4_km",
     "distance_in_speed_zone_5_km",
+    # Acceleration zone count columns (needed for total_accelerations computation)
+    "accelerations_zone_count:_1__2_mss",
+    "accelerations_zone_count:_2__3_mss",
+    "accelerations_zone_count:_3__4_mss",
+    "accelerations_zone_count:_>_4_mss",
+    # Deceleration zone count columns (needed for total_decelerations computation)
+    "deceleration_zone_count:_1__2_mss",
+    "deceleration_zone_count:_2__3_mss",
+    "deceleration_zone_count:_3__4_mss",
+    "deceleration_zone_count:_>_4_mss",
 ]
 
 # ============================================================================
@@ -76,6 +87,7 @@ VOLUME_METRICS = [
     "impacts",
     "total_accelerations",
     "total_decelerations",
+    "total_actions",
 ]
 
 INTENSITY_METRICS = [
@@ -125,6 +137,7 @@ COMPUTED_METRICS = {
 # Keys used to identify unique player-match combinations
 MERGE_KEYS = [
     "p_name",
+    "player_club_",
     "club_for",
     "club_against",
     "match_day",
@@ -154,6 +167,13 @@ AGGREGATE_MAX_METRICS = [
     "top_speed_kmh",
     "max_acceleration_mss",
     "max_deceleration_mss",
+]
+
+# Rate metrics that are re-computed AFTER aggregation (not carried through directly)
+AGGREGATE_RECOMPUTE_METRICS = [
+    "distance_per_min_mmin",
+    "acc_counts_per_min",
+    "dec_counts_per_min",
 ]
 
 # ============================================================================
@@ -195,6 +215,22 @@ METRIC_DISPLAY_NAMES = {
     "max_deceleration_mss": "Max Deceleration",
     "acc_counts_per_min": "Acceleration Counts per Min",
     "dec_counts_per_min": "Deceleration Counts per Min",
+}
+
+GENERAL_DISPLAY_NAMES = {
+    "p_name": "Player Name",
+    "club_for": "Club",
+    "club_against": "Opponent",
+    "match_day": "Match Day",
+    "general_position": "Position",
+    "player_position": "Position",
+    "unique_players": "Number of Players",
+    "total_sessions": "Total Sessions",
+    "total_players": "Total Players",
+    "total_clubs": "Total Clubs",
+    "matchdays_uploaded": "Matches Uploaded",
+    "avg_players": "Avg Players",
+    "unique_players_per_club": "Players per Club",
 }
 
 # ============================================================================

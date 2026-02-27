@@ -18,7 +18,8 @@ from io import BytesIO
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pandas as pd
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.section import WD_ORIENT, WD_SECTION
 from src.config.speed_zones import get_speed_zones
 
 
@@ -30,18 +31,34 @@ def add_table_of_contents(doc: Document) -> None:
     """
     Insert a Table of Contents field into the document.
     
-    Note: Word will require the user to "Update Field" upon opening the document 
+    Forces Word to prompt for an update upon opening the document 
     to populate the TOC with actual page numbers and headings.
     """
+    # 1. Add 'updateFields' setting to the document to trigger prompt on open
+    element = doc.settings.element
+    update_fields = element.find(qn('w:updateFields'))
+    if update_fields is None:
+        update_fields = OxmlElement('w:updateFields')
+        update_fields.set(qn('w:val'), 'true')
+        element.append(update_fields)
+
+    # 2. Add the TOC Heading
     doc.add_heading("Table of Contents", level=1)
+    
+    # 3. Add the TOC Field
     paragraph = doc.add_paragraph()
     run = paragraph.add_run()
     
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
+    fldChar1.set(qn('w:dirty'), 'true') # Mark as dirty to suggest update
     
     instrText = OxmlElement('w:instrText')
     instrText.set(qn('xml:space'), 'preserve')
+    # \o "1-3": Use headings level 1 to 3
+    # \h: Hyperlinks
+    # \z: Hide tab leader and page numbers in Web view
+    # \u: Use outline levels
     instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
     
     fldChar2 = OxmlElement('w:fldChar')
@@ -58,7 +75,24 @@ def add_table_of_contents(doc: Document) -> None:
     doc.add_page_break()
 
 
-def fmt_cell_value(val, float_fmt: str = "{:.2f}") -> str:
+def add_table_caption(doc: Document, caption: str) -> None:
+    """
+    Add a formatted caption below or above a table with automatic numbering.
+    """
+    if not hasattr(doc, '_table_count'):
+        doc._table_count = 0
+    doc._table_count += 1
+    
+    full_caption = f"Table {doc._table_count}: {caption}"
+    
+    paragraph = doc.add_paragraph()
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run = paragraph.add_run(full_caption)
+    run.italic = True
+    # Make caption slightly smaller than standard text
+    run.font.size = doc.styles['Normal'].font.size
+
+def fmt_cell_value(val, float_fmt: str = "{:,.2f}") -> str:
     """
     Format a cell value safely for DOCX insertion.
 
@@ -66,7 +100,7 @@ def fmt_cell_value(val, float_fmt: str = "{:.2f}") -> str:
 
     Args:
         val: Value to format
-        float_fmt: Format string for floats (default: "{:.2f}")
+        float_fmt: Format string for floats (default: "{:,.2f}")
 
     Returns:
         Formatted string representation
@@ -74,54 +108,50 @@ def fmt_cell_value(val, float_fmt: str = "{:.2f}") -> str:
     if val is None or (isinstance(val, float) and math.isnan(val)):
         return ""
     if isinstance(val, int):
-        return str(val)
+        return f"{val:,}"
     if isinstance(val, float):
         return float_fmt.format(val)
     return str(val)
 
 
 def add_dataframe_as_table(
-    doc: Document, df: pd.DataFrame, style: str = "Table Grid"
+    doc: Document, df: pd.DataFrame, style: str = "List Table 2 - Accent 5", caption: str = None
 ) -> None:
     """
     Add a DataFrame to the document as a formatted table.
 
     Creates table with header row and data rows from DataFrame.
+    Uses 'List Table 2 - Accent 5' style by default and removes cell spacing.
 
     Args:
         doc: python-docx Document object
         df: DataFrame to insert
-        style: Table style name (default: 'Table Grid')
+        style: Table style name
+        caption: Optional caption to display below the table
     """
     table = doc.add_table(rows=1, cols=len(df.columns))
-    table.style = style
-    table.autofit = False  # Enable manual sizing
-
-    # 1. Calculate column widths based on content
-    # Heuristic: ~0.1 inches per character for standard 10pt font
-    col_widths = []
-    for col in df.columns:
-        # Check header length
-        max_len = len(str(col))
-        # Check data lengths
-        if not df.empty:
-            col_data_max = df[col].astype(str).str.len().max()
-            max_len = max(max_len, col_data_max)
+    try:
+        table.style = style
+    except Exception:
+        table.style = "Table Grid" # Fallback if style not found
         
-        # Min width 0.5 inches, Max width 3.0 inches (to force wrapping on very long text)
-        width = min(max(0.6, max_len * 0.11), 3.5)
-        col_widths.append(Inches(width))
+    table.autofit = True
+    
+    # Autofit to window (100% width)
+    if table._tbl.tblPr is not None and table._tbl.tblPr.xpath('w:tblW'):
+        tblW = table._tbl.tblPr.xpath('w:tblW')[0]
+        tblW.set(qn('w:type'), 'pct')
+        tblW.set(qn('w:w'), '5000')
 
     # Add header row
     hdr_cells = table.rows[0].cells
     for i, col in enumerate(df.columns):
         hdr_cells[i].text = str(col)
-        table.columns[i].width = col_widths[i]
-        hdr_cells[i].width = col_widths[i] # Required for some Word versions
         
-        # Bold headers and center alignment for better looks
         for paragraph in hdr_cells[i].paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
             for run in paragraph.runs:
                 run.bold = True
 
@@ -131,14 +161,76 @@ def add_dataframe_as_table(
         for i, val in enumerate(row):
             text = fmt_cell_value(val)
             row_cells[i].text = text
-            row_cells[i].width = col_widths[i]
             
-            # Professional alignment: Center S/N and numeric columns
+            # Remove spacing and align
             col_name = str(df.columns[i]).lower()
-            if col_name in ['s/n', 'rank', 's/no', 'match day', 'value'] or 'count' in col_name:
-                for paragraph in row_cells[i].paragraphs:
+            for paragraph in row_cells[i].paragraphs:
+                paragraph.paragraph_format.space_before = Pt(0)
+                paragraph.paragraph_format.space_after = Pt(0)
+                if col_name in ['s/n', 'rank', 's/no', 'match day', 'value'] or 'count' in col_name:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    
+    if caption:
+        add_table_caption(doc, caption)
 
+
+def set_landscape(doc: Document) -> None:
+    """Add a new landscape section to the document."""
+    new_section = doc.add_section(WD_SECTION.NEW_PAGE)
+    new_width, new_height = new_section.page_height, new_section.page_width
+    new_section.orientation = WD_ORIENT.LANDSCAPE
+    new_section.page_width = new_width
+    new_section.page_height = new_height
+
+
+def set_portrait(doc: Document) -> None:
+    """Add a new portrait section to the document."""
+    new_section = doc.add_section(WD_SECTION.NEW_PAGE)
+    new_section.orientation = WD_ORIENT.PORTRAIT
+    new_section.page_width = Inches(8.5)
+    new_section.page_height = Inches(11)
+
+
+def add_branded_header(doc: Document, text: str, icon_path: str = None) -> None:
+    """Add a heading with an optional icon for
+     branding."""
+    p = doc.add_heading('', level=1)
+    if icon_path and os.path.exists(icon_path):
+        run = p.add_run()
+        try:
+            run.add_picture(icon_path, width=Inches(0.35))
+            run.add_text("  ") # Spacer
+        except Exception as e:
+            print(f"Warning: Could not add icon {icon_path}: {e}")
+    p.add_run(text)
+
+
+def add_title_page(doc: Document, title: str, subtitle: str, logo_path: str = None) -> None:
+    """Create a  title page with logo and branding."""
+    # Move to first page
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    if logo_path and os.path.exists(logo_path):
+        run = p.add_run()
+        try:
+            run.add_picture(logo_path, width=Inches(2.5))
+            doc.add_paragraph()
+            doc.add_paragraph()
+        except Exception as e:
+            print(f"Warning: Could not add logo {logo_path}: {e}")
+        
+    t = doc.add_paragraph(title)
+    t.style = 'Title'
+    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    st = doc.add_paragraph(subtitle)
+    st.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in st.runs:
+        run.font.size = Pt(14)
+        run.font.color.rgb = RGBColor(80, 80, 80)
+    
+    doc.add_page_break()
 
 def add_introduction_section(doc: Document, club_name: str, season: str = "2025/26") -> None:
     """
@@ -388,32 +480,50 @@ As we move into the next season, we look forward to your feedback and stand read
     )
 
 
-def embed_matplotlib_figure(doc: Document, fig, width_inches: float = 6.0) -> None:
+def embed_matplotlib_figure(doc: Document, fig, width_inches: float = 6.0, caption: str = None) -> None:
     """
-    Embed a matplotlib figure in the document.
+    Embed a matplotlib figure in the document with optional numbered caption.
 
     Args:
         doc: python-docx Document object
         fig: matplotlib figure object
         width_inches: Width of embedded image (default: 6.0)
+        caption: Optional caption text
     """
     img_stream = BytesIO()
     try:
         # Check if figure is empty (no axes)
-        if not fig.axes:
+        if hasattr(fig, 'axes') and not fig.axes:
             # Create a dummy figure with text
             import matplotlib.pyplot as plt
             dummy_fig, ax = plt.subplots(figsize=(6, 2))
             ax.text(0.5, 0.5, "No data available for visualization", 
                    ha='center', va='center', fontsize=12)
             ax.axis('off')
-            dummy_fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=100)
+            dummy_fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=300)
             plt.close(dummy_fig)
         else:
-            fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=100)
+            fig.savefig(img_stream, format="png", bbox_inches="tight", dpi=300)
             
         img_stream.seek(0)
-        doc.add_picture(img_stream, width=Inches(width_inches))
+        
+        # Add to document with centering
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run()
+        run.add_picture(img_stream, width=Inches(width_inches))
+        
+        if caption:
+            if not hasattr(doc, '_figure_count'):
+                doc._figure_count = 0
+            doc._figure_count += 1
+            
+            paragraph = doc.add_paragraph()
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            run = paragraph.add_run(f"Figure {doc._figure_count}: {caption}")
+            run.italic = True
+            run.font.size = doc.styles['Normal'].font.size
+
     except Exception as e:
         print(f"Error embedding figure: {e}")
         # Insert a placeholder text in doc instead

@@ -20,24 +20,17 @@ import pandas as pd
 from src.pipelines.base import AnalysisPipeline
 from src.data import cleaning
 from src.analysis import analysis
-from src.reporting import (
-    get_matchday_stats,
-    get_players_monitored_stats,
-    get_metric_summary,
-    get_top_players_by_metric,
-    get_average_metrics_by_position,
-    club_vs_season_comparison,
-    add_dataframe_as_table,
-    add_introduction_section,
-    add_methodology_section,
-    add_key_concepts_section,
-    add_challenges_section,
-    add_future_plans_section,
-    add_conclusion_section,
-    save_document,
-    create_report_document,
+from src.analysis.visualizations import (
+    plot_club_metrics_trend,
 )
-from src.config import league_definitions, constants
+from src.reporting import (
+    save_document,
+)
+from src.reporting.club_report_builder import ClubReportBuilder
+from src.reporting.season_report_builder import SeasonReportBuilder
+from src.analysis import season_analysis
+from src.config import league_definitions
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +80,18 @@ class FullPipeline(AnalysisPipeline):
         parser.add_argument(
             "--skip-club-reports",
             action="store_true",
-            help="Skip per-club report generation"
+            help="Skip generation of individual club reports"
+        )
+        parser.add_argument(
+            "--timeframe",
+            default="season",
+            choices=["season", "half_season"],
+            help="Timeframe for League Report (season/half_season)"
+        )
+        parser.add_argument(
+            "--gk",
+            action="store_true",
+            help="Include/Generate goalkeeper reports"
         )
 
     def validate_args(self) -> bool:
@@ -115,7 +119,7 @@ class FullPipeline(AnalysisPipeline):
         try:
             # ===== PHASE 1: Configuration =====
             self.log("Phase 1: Loading Configuration...")
-            league_config = self._phase_1_config(league)
+            self._phase_1_config(league)
             
             # ===== PHASE 2: Data Cleaning =====
             self.log("Phase 2: Data Cleaning...")
@@ -135,15 +139,20 @@ class FullPipeline(AnalysisPipeline):
             analysis_results = self._phase_3_analysis(cleaned_df)
             self.log(f"  Computed {len(analysis_results)} analysis datasets")
             
-            # ===== PHASE 4: Reporting (Club Reports) =====
+            # ===== PHASE 4: Reporting =====
+            self.log("Phase 4: Reporting...")
+            
+            # 1. League-Wide Report (Season/Half-Season)
+            self._phase_4_league_reporting(cleaned_df, league)
+            
+            # 2. Individual Club Reports
             if not self.args.skip_club_reports:
-                self.log("Phase 4: Report Generation...")
-                report_count = self._phase_4_reporting(
-                    cleaned_df, league, season, include_gk, analysis_results
+                report_count = self._phase_4_club_reporting(
+                    cleaned_df, league, season, include_gk or self.args.gk, analysis_results
                 )
                 self.log(f"  Generated {report_count} club reports")
             else:
-                self.log("Phase 4: Skipped (--skip-club-reports)")
+                self.log("  Club reports skipped (--skip-club-reports)")
             
             self.log("Full Pipeline Complete!")
             return True
@@ -267,7 +276,7 @@ class FullPipeline(AnalysisPipeline):
     # PHASE 4: Report Generation
     # =========================================================================
     
-    def _phase_4_reporting(
+    def _phase_4_club_reporting(
         self,
         cleaned_df: pd.DataFrame,
         league: str,
@@ -275,121 +284,67 @@ class FullPipeline(AnalysisPipeline):
         include_gk: bool,
         analysis_results: Dict[str, Any]
     ) -> int:
-        """
-        Generate per-club Word reports.
-        
-        Args:
-            cleaned_df: Cleaned dataframe
-            league: League identifier
-            season: Season string
-            include_gk: Whether to include goalkeepers
-            analysis_results: Analysis results from Phase 3
-            
-        Returns:
-            Number of reports generated
-        """
-        # Filter goalkeepers if needed
-        if not include_gk:
-            cleaned_df = cleaned_df[
-                cleaned_df["general_position"] != "goalkeeper"
-            ].copy()
-
+        """Generate per-club premium Word reports using ClubReportBuilder."""
         reports_dir = self.output_dir / "02_club_reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get metrics and display names
-        volume_metrics = constants.VOLUME_METRICS
-        intensity_metrics = constants.INTENSITY_METRICS
-        metric_display_names = constants.METRIC_DISPLAY_NAMES
         matchday_order = analysis_results.get("matchday_order", [])
-
-        # Generate report per club
         unique_clubs = cleaned_df["club_for"].unique()
         report_count = 0
 
         for club in unique_clubs:
             try:
                 club_df = cleaned_df[cleaned_df["club_for"] == club].copy()
-                
-                self.log(f"  Generating report for {club}...")
-                
-                # Create document
-                doc = create_report_document(club)
-                
-                # Add sections following standardized structure
-                add_introduction_section(doc, club, season=season)
-                doc.add_page_break()
-                
-                add_methodology_section(doc, season=season)
-                doc.add_page_break()
-                
-                add_key_concepts_section(doc, season=season)
-                doc.add_page_break()
+                if not include_gk:
+                    club_df = club_df[club_df["general_position"] != "goalkeeper"].copy()
 
-                # Season Results
-                doc.add_heading("Season Results", level=1)
-                doc.add_heading("Match Day Usage", level=2)
-                matchday_stats = get_matchday_stats(club_df, matchday_order)
-                add_dataframe_as_table(doc, matchday_stats)
-                doc.add_paragraph()
-
-                doc.add_heading("Player Usage", level=1)
-                players_stats = get_players_monitored_stats(club_df)
-                add_dataframe_as_table(doc, players_stats)
-                doc.add_paragraph()
-
-                # Club Metrics
-                doc.add_heading("Club Metric Results", level=1)
-                metric_summary = get_metric_summary(
-                    club_df, volume_metrics, intensity_metrics, metric_display_names
+                builder = ClubReportBuilder(
+                    club=club,
+                    club_df=club_df,
+                    season_df=cleaned_df,
+                    league=league,
+                    season=season,
+                    output_dir=reports_dir,
+                    matchday_order=matchday_order,
+                    include_gk=include_gk
                 )
-                add_dataframe_as_table(doc, metric_summary)
-                doc.add_paragraph()
-
-                doc.add_heading("Top Players by Metric", level=1)
-                top_players = get_top_players_by_metric(
-                    club_df,
-                    volume_metrics + intensity_metrics,
-                    metric_display_names,
-                )
-                add_dataframe_as_table(doc, top_players)
-                doc.add_paragraph()
-
-                doc.add_heading("Average Metrics Per Position", level=1)
-                pos_stats = get_average_metrics_by_position(
-                    club_df, volume_metrics, intensity_metrics, metric_display_names
-                )
-                add_dataframe_as_table(doc, pos_stats)
-                doc.add_paragraph()
-
-                doc.add_heading("Club Comparison", level=1)
-                club_comparison = club_vs_season_comparison(
-                    club_df, cleaned_df, volume_metrics, intensity_metrics, 
-                    metric_display_names
-                )
-                add_dataframe_as_table(doc, club_comparison)
-                doc.add_paragraph()
-
-                # Closing sections
-                doc.add_page_break()
-                add_challenges_section(doc)
-                doc.add_page_break()
-                add_future_plans_section(doc, season=season)
-                doc.add_page_break()
-                add_conclusion_section(doc, season=season)
-
-                # Save report
-                report_path = save_document(
-                    doc, str(reports_dir), f"{club}_report.docx"
-                )
-                self.log(f"    Saved: {report_path}")
+                builder.build()
                 report_count += 1
-
             except Exception as e:
-                self.log(
-                    f"  Warning: Failed to generate report for {club}: {e}",
-                    logging.WARNING
-                )
-                continue
+                self.log(f"  Warning: Failed to generate report for {club}: {e}", logging.WARNING)
 
         return report_count
+
+    def _phase_4_league_reporting(self, df: pd.DataFrame, league: str) -> bool:
+        """Generate league-wide summary report."""
+        try:
+            timeframe = self.args.timeframe
+            self.log(f"  Generating League-Wide {timeframe.title()} Report...")
+
+            # Get half_season_limit from config (consistent with SeasonPipeline)
+            config_path = Path(__file__).parents[1] / "config" / "analysis_config.yaml"
+            half_season_limit = 15
+            if config_path.exists():
+                with open(config_path) as f:
+                    cfg = yaml.safe_load(f)
+                    half_season_limit = cfg.get('season_report', {}).get('half_season_matchday', {}).get(league, 15)
+
+            # Filter for League-Wide context
+            filtered_df = season_analysis.filter_data_by_timeframe(df, timeframe, league, half_season_limit)
+
+            if filtered_df.empty:
+                self.log("  Warning: No data found after timeframe filtering.", logging.WARNING)
+                return False
+
+            report_dir = self.output_dir / "03_league_report"
+            report_dir.mkdir(parents=True, exist_ok=True)
+
+            builder = SeasonReportBuilder(
+                filtered_df, league, timeframe, report_dir, half_season_limit,
+                season=self.args.season, gk_mode=self.args.gk
+            )
+            builder.build_report()
+            return True
+        except Exception as e:
+            self.log(f"  Warning: League reporting failed: {e}", logging.WARNING)
+            return False

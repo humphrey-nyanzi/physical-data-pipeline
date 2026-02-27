@@ -130,6 +130,11 @@ POSITION_MAPPING = {
     "rw": "forward",
     "lw": "forward",
     "cf": "forward",
+    "mfwd":"forward",
+    "dfwd":"forward",
+    "fwdw":"forward",
+    "fwdwd":"forward",
+    "cfwd":"foward"
 }
 
 # Aliases for position mapping (common typos or variants)
@@ -145,7 +150,7 @@ POSITION_ALIASES = {
 FWSL_POSITION_GROUPS = {
     "defenders": ["cb", "lb", "rb", "df", "cd", "dc", "lcb"],
     "midfielders": ["mf", "cm", "am", "dmc", "amc", "mc", "md"],
-    "forwards": ["fw", "fwd", "rw", "lw", "cf"],
+    "forwards": ["fw", "fwd", "rw", "lw", "cf", "mfwd", "dfwd", "fwdw", "fwdwd", "cfwd"],
     "goalkeepers": ["gk"],
 }
 
@@ -170,7 +175,7 @@ UPL_POSITION_GROUPS = {
         "md",
     ],
     "midfielder": ["mf", "cm", "am", "dm", "dmc", "amc", "mc", "md"],
-    "forward": ["fw", "fwd", "rw", "lw", "cf"],
+    "forward": ["fw", "fwd", "rw", "lw", "cf", "mfwd", "dfwd", "fwdw", "fwdwd", "cfwd"],
     "goalkeeper": ["gk"],
 }
 

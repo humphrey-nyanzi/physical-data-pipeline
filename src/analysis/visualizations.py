@@ -53,21 +53,24 @@ def apply_fufa_chart_theme(ax, remove_y_labels=False, remove_y_ticks=False, remo
     """Apply professional FUFA brand styling to chart axes with creative enhancements.
     
     Features:
-    - Clean spine styling with subtle gridlines
-    - Professional typography using system fonts
+    - Modern typography using Aptos Display/Sans-serif stack
+    - Clean spine styling with extremely subtle gridlines
     - Optional axis removal for cleaner data-to-ink ratio
-    - Subtle color palette that doesn't overwhelm data
     """
+    # Global Font Setup
+    plt.rcParams['font.family'] = 'sans-serif'
+    plt.rcParams['font.sans-serif'] = ['Segoe UI', 'Arial', 'DejaVu Sans']
+    
     # Spine styling - minimal but present
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#D0D0D0')
+    ax.spines['left'].set_color('#E0E0E0')
     ax.spines['left'].set_linewidth(0.8)
-    ax.spines['bottom'].set_color('#D0D0D0')
+    ax.spines['bottom'].set_color('#E0E0E0')
     ax.spines['bottom'].set_linewidth(0.8)
     
-    # Grid - subtle, professional appearance
-    ax.yaxis.grid(True, linestyle='-', alpha=0.15, color='#808080', linewidth=0.5)
+    # Grid - extremely subtle
+    ax.yaxis.grid(True, linestyle='-', alpha=0.08, color='#808080', linewidth=0.5)
     ax.set_axisbelow(True)
     
     # Axis management
@@ -78,34 +81,61 @@ def apply_fufa_chart_theme(ax, remove_y_labels=False, remove_y_ticks=False, remo
     if remove_x_labels:
         ax.set_xticklabels([])
     
-    # Professional tick styling - not bold, just readable
-    ax.tick_params(labelsize=8.5, colors='#404040')
-    ax.xaxis.label.set_fontsize(9.5)
-    ax.yaxis.label.set_fontsize(9.5)
+    # Professional tick styling
+    ax.tick_params(labelsize=8.5, colors='#4F4F4F')
+    ax.xaxis.label.set_fontsize(10)
+    ax.yaxis.label.set_fontsize(10)
+    ax.xaxis.label.set_fontweight('400')
+    ax.yaxis.label.set_fontweight('400')
 
 def apply_professional_style(ax, title: str, xlabel: str = '', ylabel: str = ''):
     """
     Apply professional FUFA brand styling with creative enhancements.
     
-    Uses selective bold (titles only), professional typography, and 
+    Uses selective bold (titles only), modern typography, and 
     improved contrast for readability while maintaining FUFA branding.
-    
-    Args:
-        ax: Matplotlib axis object
-        title: Plot title (will be bolded)
-        xlabel: X-axis label (regular weight)
-        ylabel: Y-axis label (regular weight)
     """
     apply_fufa_chart_theme(ax)
     
     # Title - bold and prominent
-    ax.set_title(title, fontsize=13, fontweight='bold', pad=18, color=FUFA_COLORS['dark_blue'])
+    if title:
+        ax.set_title(title, fontsize=12.5, fontweight='bold', pad=18, color=FUFA_COLORS['dark_blue'])
     
     # Axis labels - regular weight, darker color for contrast
     if xlabel:
-        ax.set_xlabel(xlabel, fontsize=9.5, fontweight='400', color='#1F1F1F')
+        ax.set_xlabel(xlabel, fontsize=10, fontweight='400', color='#1F1F1F')
     if ylabel:
-        ax.set_ylabel(ylabel, fontsize=9.5, fontweight='400', color='#1F1F1F')
+        ax.set_ylabel(ylabel, fontsize=10, fontweight='400', color='#1F1F1F')
+    
+    # Ensure all text uses the modern font stack
+    for text in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
+        text.set_fontfamily(['Arial', 'Sans Serif'])
+
+
+def add_bar_gradient(bars, ax):
+    """Add a subtle vertical gradient to bar charts for a premium look."""
+    import matplotlib.colors as mcolors
+    from matplotlib.patches import Rectangle
+    
+    for bar in bars:
+        # Get properties
+        x, y = bar.get_xy()
+        w, h = bar.get_width(), bar.get_height()
+        base_color = bar.get_facecolor()
+        
+        # Hide original bar to replace with gradient
+        bar.set_alpha(0)
+        
+        # Create gradient image (lighter at top)
+        grad = np.atleast_2d(np.linspace(0.8, 1.15, 100)).T
+        rgb = mcolors.to_rgb(base_color)
+        ax.imshow(grad, extent=[x, x+w, y, y+h], aspect='auto', 
+                  origin='lower', cmap=mcolors.LinearSegmentedColormap.from_list("", [(0,0,0,0), rgb]),
+                  zorder=bar.get_zorder())
+        
+        # Add a crisp border
+        rect = Rectangle((x, y), w, h, fill=False, edgecolor='white', linewidth=0.8, alpha=0.35)
+        ax.add_patch(rect)
     
     # Tick styling
     ax.tick_params(axis='x', labelsize=8.5, colors='#404040')
@@ -514,9 +544,9 @@ def plot_rolling_trend_grid(
     Plot 2x2 grid of rolling trends with professional styling.
     
     Features:
-    - Rolling average with hollow markers
-    - Light baseline with dark trend line
-    - Clean grid layout with individual titles
+    - Rolling average with markers standing out
+    - Light baseline (raw values)
+    - Unified legend at the bottom
     """
     import re
     def get_md_num(s):
@@ -527,29 +557,41 @@ def plot_rolling_trend_grid(
     daily['md_num'] = daily['match_day'].apply(get_md_num)
     daily = daily.sort_values('md_num')
     
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10), facecolor='white')
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12), facecolor='white')
     axes = axes.flatten()
     
+    lines = []
+    labels = []
+
     for i, (metric, name) in enumerate(metrics.items()):
         ax = axes[i]
         
         # Light baseline
-        ax.plot(range(len(daily)), daily[metric], color='#D0D0D0', 
-               alpha=0.5, label='Daily Avg', linewidth=1.5, linestyle='-')
+        l1, = ax.plot(range(len(daily)), daily[metric], color='#D0D0D0', 
+                     alpha=0.5, label='Match Day Avg' if i == 0 else "", 
+                     linewidth=1.5, linestyle='-')
         
-        # Rolling trend with professional markers
+        # Rolling trend
         if len(daily) >= window:
             rolling = daily[metric].rolling(window=window, min_periods=1).mean()
-            ax.plot(range(len(daily)), rolling, color=FUFA_COLORS['dark_blue'], 
-                   linewidth=2.5, label=f'{window}-MD Rolling', 
-                   marker='o', markersize=6, markerfacecolor='white', 
-                   markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=1.5)
+            l2, = ax.plot(range(len(daily)), rolling, color=FUFA_COLORS['dark_blue'], 
+                         linewidth=3, label=f'{window}-MD Rolling' if i == 0 else "", 
+                         marker='o', markersize=6, markerfacecolor='white', 
+                         markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2)
+            if i == 0:
+                lines.extend([l1, l2])
+                labels.extend(['Match Day Avg', f'{window}-MD Rolling'])
             
         apply_professional_style(ax, f"{name} Trend", "Match Day", name)
         ax.tick_params(axis='x', rotation=45, labelsize=8)
-        ax.legend(fontsize=8, frameon=False, loc='best')
+        
+    # Unified legend
+    if lines:
+        fig.legend(lines, labels, loc='lower center', ncol=2, 
+                   frameon=False, fontsize=10, bbox_to_anchor=(0.5, -0.02))
         
     plt.tight_layout()
+    plt.subplots_adjust(bottom=0.08)
     return fig
 
 def plot_speed_zones_stacked(
@@ -601,13 +643,14 @@ def plot_context_comparison(
     fig, ax = plt.subplots(figsize=(9, 6), facecolor='white')
     
     bars = ax.bar(context_df.index, context_df[metric], color=FUFA_COLORS['dark_blue'], 
-                 alpha=0.88, edgecolor='white', linewidth=2, width=0.6)
+                 alpha=0.9, edgecolor='white', linewidth=1.5, width=0.6)
     
-    # Highlight maximum in lighter blue
+    # Apply gradient
+    add_bar_gradient(bars, ax)
+    
+    # Highlight maximum in lighter blue (re-apply logic to top)
     max_val = context_df[metric].max()
-    for bar in bars:
-        if bar.get_height() == max_val:
-            bar.set_color(FUFA_COLORS['light_blue'])
+    # Logic for manual labels remains same
             
     # Professional value labels
     for bar in bars:
@@ -618,7 +661,7 @@ def plot_context_comparison(
                color=FUFA_COLORS['dark_blue'])
     
     apply_professional_style(ax, f"{metric_name} by {xlabel}", xlabel, metric_name)
-    ax.set_xticklabels(context_df.index, fontsize=9, fontweight='400')
+    ax.set_xticklabels(context_df.index, fontsize=9.5, fontweight='400')
     plt.tight_layout()
     return fig
 
@@ -788,3 +831,237 @@ def plot_positional_metrics(
 
     plt.tight_layout()
     plt.show()
+
+
+# ============================================================================
+# Club-Level Visualizations (for individual club reports)
+# ============================================================================
+
+
+def plot_players_per_matchday(
+    matchday_stats: pd.DataFrame,
+    club_name: str = "",
+    figsize: Tuple[int, int] = (12, 5),
+):
+    """Plot line chart of players monitored per matchday for a single club.
+    
+    Args:
+        matchday_stats: DataFrame from get_matchday_stats() with columns
+                        'Match Day' and 'Number of Players Monitored'
+        club_name: Club name for title
+        figsize: Figure size
+        
+    Returns:
+        matplotlib Figure object
+    """
+    fig, ax = plt.subplots(figsize=figsize, facecolor='white')
+    
+    data = matchday_stats.copy()
+    x = range(len(data))
+    y = data['Number of Players Monitored'].values
+    
+    # Main line
+    ax.plot(
+        x, y, marker='o', linewidth=2.5,
+        color=FUFA_COLORS['light_blue'],
+        markersize=8, markerfacecolor='white',
+        markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2
+    )
+    
+    # Annotate each point with value in a subtle badge
+    for i, val in enumerate(y):
+        if val > 0:
+            ax.annotate(
+                f'{int(val)}', (i, val),
+                textcoords="offset points", xytext=(0, 14),
+                ha='center', fontsize=8, fontweight='600',
+                color=FUFA_COLORS['dark_blue'],
+                bbox=dict(
+                    boxstyle="circle,pad=0.3",
+                    edgecolor=FUFA_COLORS['light_blue'],
+                    facecolor='white', linewidth=1
+                )
+            )
+    
+    # X-axis labels
+    md_labels = [str(md).replace('Md', 'MD ') for md in data['Match Day']]
+    ax.set_xticks(x)
+    ax.set_xticklabels(md_labels, rotation=90, fontsize=9)
+    
+    title = 'Players Monitored per Matchday'
+    if club_name:
+        title += f' – {club_name}'
+    apply_professional_style(ax, title, 'Match Day', 'Number of Players')
+    
+    plt.tight_layout()
+    return fig
+
+
+def plot_club_metrics_trend(
+    avg_per_md_plot: pd.DataFrame,
+    matchday_order: list,
+    half_season_md: int = 11,
+    club_name: str = "",
+    figsize: Tuple[int, int] = (16, 10),
+    window: int = 3
+):
+    """Plot 2×2 grid of key metrics across matchdays with rolling averages.
+    
+    Shows Distance, Sprint Distance, Player Load, Top Speed trends with:
+    - Raw data baseline (faded)
+    - 3-matchday rolling average (standing out)
+    - Season-average horizontal reference line
+    - First/second round background shading
+    - Unified legend at the bottom
+    """
+    fig, axes = plt.subplots(2, 2, figsize=figsize, facecolor='white')
+    
+    metrics = [
+        ('distance_km', 'Distance (km)'),
+        ('sprint_distance_m', 'Sprint Distance (m)'),
+        ('player_load', 'Player Load'),
+        ('top_speed_kmh', 'Top Speed (km/h)'),
+    ]
+    
+    data = avg_per_md_plot.copy()
+    
+    # Get the half-season split index
+    try:
+        md_key = f'md{half_season_md}'
+        matchdays_lower = [str(md).lower() for md in data['match_day']]
+        if md_key in matchdays_lower:
+            split_idx = matchdays_lower.index(md_key)
+        else:
+            split_idx = len(data) // 2
+    except Exception:
+        split_idx = len(data) // 2
+    
+    lines = []
+    labels = []
+
+    for i, (ax, (col, label)) in enumerate(zip(axes.flatten(), metrics)):
+        if col not in data.columns:
+            ax.text(0.5, 0.5, f'{label}\nnot available', ha='center', va='center',
+                    fontsize=11, transform=ax.transAxes)
+            ax.set_axis_off()
+            continue
+        
+        x = range(len(data))
+        y = data[col].values
+        
+        # Raw data (faded baseline)
+        l1, = ax.plot(x, y, color='#D0D0D0', alpha=0.5, linewidth=1.5, 
+                     label='Match Day Avg' if i == 0 else "")
+        
+        # Rolling average (standing out)
+        if len(data) >= window:
+            rolling_y = data[col].rolling(window=window, min_periods=1).mean()
+            l2, = ax.plot(x, rolling_y, color=FUFA_COLORS['dark_blue'], 
+                         linewidth=3, label=f'{window}-Match Rolling Avg' if i == 0 else "",
+                         marker='o', markersize=6, markerfacecolor='white', 
+                         markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2)
+            if i == 0:
+                lines.extend([l1, l2])
+                labels.extend(['Match Day Avg', f'{window}-Match Rolling Avg'])
+        
+        # Season average line
+        avg_value = data[col].mean()
+        l3 = ax.axhline(avg_value, color=FUFA_COLORS['red'], linestyle='--',
+                       linewidth=1.2, alpha=0.7,
+                       label=f'Season Avg' if i == 0 else "")
+        if i == 0:
+            lines.append(l3)
+            labels.append('Season Avg')
+        
+        # Round shading
+        if split_idx > 0 and split_idx < len(data):
+            ax.axvspan(-0.5, split_idx - 0.5, color='#B8D4E8', alpha=0.18)
+            ax.axvspan(split_idx - 0.5, len(data) - 0.5, color='#C8E6C9', alpha=0.18)
+            
+            # Round labels (only once or subtly)
+            ymin, ymax = ax.get_ylim()
+            ax.text(split_idx / 2, ymin + (ymax - ymin) * 0.02,
+                    'First Round', color=FUFA_COLORS['dark_blue'],
+                    fontsize=9, ha='center', alpha=0.5, style='italic')
+            ax.text(split_idx + (len(data) - split_idx) / 2,
+                    ymin + (ymax - ymin) * 0.02,
+                    'Second Round', color='#2E7D32',
+                    fontsize=9, ha='center', alpha=0.5, style='italic')
+        
+        # X-axis
+        md_labels = [str(md).replace('Md', 'MD ') for md in data['match_day']]
+        ax.set_xticks(x)
+        ax.set_xticklabels(md_labels, rotation=90, fontsize=8)
+        
+        apply_professional_style(ax, f'{label} Trends', 'Match Day', label)
+        # Individual legend removed
+    
+    # Unified legend at bottom
+    if lines:
+        fig.legend(lines, labels, loc='lower center', ncol=3, 
+                   frameon=False, fontsize=10, bbox_to_anchor=(0.5, -0.05))
+    
+    if club_name:
+        fig.suptitle(f'{club_name} – Physical Performance Trends', fontsize=16,
+                     fontweight='bold', color=FUFA_COLORS['dark_blue'], y=1.02)
+    
+    plt.tight_layout()
+    # Adjust layout to make room for bottom legend if needed
+    plt.subplots_adjust(bottom=0.08)
+    return fig
+
+
+def plot_speed_zone_by_position(
+    zone_pct: pd.DataFrame,
+    club_name: str = "",
+    figsize: Tuple[int, int] = (10, 6),
+):
+    """Plot stacked bar chart of speed zone percentages by position.
+    
+    Args:
+        zone_pct: DataFrame from get_speed_zone_breakdown()[1]
+                  (rows=positions, columns=zone labels, values=percentages)
+        club_name: Club name for title
+        figsize: Figure size
+        
+    Returns:
+        matplotlib Figure object
+    """
+    fig, ax = plt.subplots(figsize=figsize, facecolor='white')
+    
+    zone_pct.plot(
+        kind='bar', stacked=True, ax=ax,
+        color=FUFA_SEQUENTIAL[:len(zone_pct.columns)],
+        alpha=0.92, width=0.65, edgecolor='white', linewidth=1.5
+    )
+    
+    # Annotate percentage values inside each bar segment
+    for i, pos in enumerate(zone_pct.index):
+        cumulative = 0
+        for j, zone in enumerate(zone_pct.columns):
+            value = zone_pct.loc[pos, zone]
+            height = value
+            y = cumulative + height / 2
+            if value > 3:  # Only annotate segments large enough to read
+                ax.text(
+                    i, y, f'{value:.1f}%',
+                    ha='center', va='center', fontsize=8,
+                    color='white' if j < 2 else 'black',
+                    fontweight='bold'
+                )
+            cumulative += height
+    
+    title = 'Distance Distribution by Speed Zone & Position'
+    if club_name:
+        title += f'\n{club_name}'
+    
+    apply_professional_style(ax, title, 'Position Group', 'Percentage (%)')
+    ax.set_ylim(0, 100)
+    ax.set_xticklabels(zone_pct.index, rotation=0, fontsize=9)
+    ax.legend(
+        title='Speed Zone', frameon=False,
+        bbox_to_anchor=(1.01, 1), loc='upper left', fontsize=9
+    )
+    
+    plt.tight_layout()
+    return fig

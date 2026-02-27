@@ -44,20 +44,20 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 
 ### Running the Pipeline
 
-**Option 1: Unified CLI (Recommended - Production Ready)**
+**Unified CLI (Recommended)**
 
 ```bash
 # Full 4-phase pipeline (Config → Clean → Analyze → Report)
-python scripts/match_analysis.py full --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
+# Generates both League summary and individual Club reports
+python scripts/match_analysis.py full --league upl --input data/raw/24_25_season_raw_catapult_data.csv --season 2024/25
 
-# Season analysis with league reports
-python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
-
-# Weekly GPS report
-python scripts/match_analysis.py weekly --md 11
+# Options:
+# --timeframe [season/half_season] (Default: season)
+# --gk (Include/Generate additional goalkeeper reports)
 ```
 
 All available options:
+
 ```bash
 python scripts/match_analysis.py <command> --help
 ```
@@ -134,9 +134,6 @@ Match-Analysis/
 │   ├── weekly.py                 # Weekly report pipeline logic
 │   └── season.py                 # Season analysis pipeline logic
 │
-├── src/pipeline/                 # DEPRECATED (legacy - do not use)
-│   ├── orchestrator.py           # [Legacy code - scheduled for removal]
-│   └── __init__.py               # [Exports deprecated classes]
 │
 ├── notebooks/                    # Interactive analysis workflows
 │   ├── main_pipeline.ipynb       # Entry point (league selection)
@@ -411,86 +408,7 @@ create_club_report(
 
 ---
 
-## 🧪 Testing
 
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_cleaning.py
-
-# Run with coverage
-pytest --cov=src tests/
-```
-
-### Test Structure
-
-```
-tests/
-├── conftest.py              # Shared fixtures
-├── test_cleaning.py         # Data cleaning tests
-├── test_analysis.py         # Analysis function tests
-├── test_metrics.py          # Metric computation tests
-├── test_validators.py       # Validation function tests
-└── fixtures/
-    ├── sample_raw_data.csv
-    └── sample_cleaned_data.csv
-```
-
-### Example Test
-
-```python
-def test_clean_matches_fwsl(sample_raw_data):
-    """Test FWSL data cleaning."""
-    result = clean_matches('fwsl', test_data=sample_raw_data)
-    
-    assert 'club' in result.columns
-    assert 'league' in result.columns
-    assert all(result['league'] == 'FWSL')
-```
-
----
-
-## 🔧 Common Tasks
-
-### Task 1: Add a New Team
-
-1. Update [src/config/league_definitions.py](src/config/league_definitions.py)
-2. Add club name to appropriate league dictionary
-3. Update [src/config/constants.py](src/config/constants.py) if special name mappings needed
-4. Rerun cleaning and reporting
-
-### Task 2: Add a New Metric
-
-1. Define in [src/config/metrics.py](src/config/metrics.py)
-2. Implement computation in [src/analysis/analysis.py](src/analysis/analysis.py)
-3. Add to report templates in [src/reporting/](src/reporting/)
-4. Add tests in [tests/test_metrics.py](tests/test_metrics.py)
-
-### Task 3: Update Raw Data
-
-1. Place new CSV in `data/raw/`
-2. Update `RAW_DATA_FILE` in [src/config/constants.py](src/config/constants.py) if filename changed
-3. Run cleaning: `notebooks/01_clean_data.ipynb`
-4. Run analysis: `notebooks/02_analyze_league.ipynb`
-5. Generate reports: `notebooks/03_generate_reports.ipynb`
-
-### Task 4: Generate Reports for a Single Club
-
-```python
-from src.reporting.document_generator import create_club_report
-
-create_club_report(
-    club='KCCA FC',
-    league='upl',
-    output_path='reports/UPL/KCCA_FC_report.docx'
-)
-```
-
----
 
 ## 📊 Output Examples
 
@@ -722,7 +640,6 @@ For questions, issues, or suggestions:
 ## 🗺️ Project Roadmap
 
 - [ ] Interactive web dashboard for data exploration
-- [ ] Real-time data ingestion from Catapult API
 - [ ] Player benchmarking across leagues
 - [ ] Injury risk prediction models
 - [ ] Tactical analysis (positioning, heat maps)

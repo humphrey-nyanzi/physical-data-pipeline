@@ -4,7 +4,7 @@ class ReportStyles:
     """Centralized configuration for report styling."""
     
     # Fonts
-    FONT_NAME = 'Aptos Display'
+    FONT_NAME = 'Arial'
     
     # Font Sizes
     FONT_SIZE_TITLE = Pt(18)
@@ -17,7 +17,7 @@ class ReportStyles:
     COLOR_RED = RGBColor(192, 0, 0)
     
     # Table Styles
-    TABLE_STYLE = 'Table Grid'
+    TABLE_STYLE = 'List Table2 - Accent 5'
     
     @classmethod
     def apply_normal_style(cls, doc):
@@ -28,9 +28,10 @@ class ReportStyles:
             font.name = cls.FONT_NAME
             font.size = cls.FONT_SIZE_NORMAL
             
-            # Line spacing
-            style.paragraph_format.line_spacing = 1.15
-            style.paragraph_format.space_after = Pt(10)
+            # Line spacing - more airy
+            style.paragraph_format.line_spacing = 1.2
+            style.paragraph_format.space_after = Pt(12)
+            style.paragraph_format.space_before = Pt(0)
 
     @classmethod
     def apply_heading_styles(cls, doc):
@@ -52,10 +53,10 @@ class ReportStyles:
                 if 'italic' in config:
                     h_font.italic = config['italic']
                 
-                # Headings spacing
-                h_style.paragraph_format.space_before = Pt(14)
-                h_style.paragraph_format.space_after = Pt(6)
-                h_style.paragraph_format.line_spacing = 1.0
+                # Headings spacing - professional rhythm
+                h_style.paragraph_format.space_before = Pt(18)
+                h_style.paragraph_format.space_after = Pt(8)
+                h_style.paragraph_format.line_spacing = 1.15
                 
         if 'Title' in doc.styles:
             title_style = doc.styles['Title']
