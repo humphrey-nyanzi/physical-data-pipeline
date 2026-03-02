@@ -90,15 +90,21 @@ def main():
             sys.exit(1)
             
         try:
+            # Initialize hierarchical output and file logging
+            pipeline.setup_run_context()
+            
             success = pipeline.run()
             if success:
                 logging.info(f"{args.command.title()} pipeline completed successfully.")
+                pipeline.save_metadata(status="completed")
                 sys.exit(0)
             else:
                 logging.error(f"{args.command.title()} pipeline failed.")
+                pipeline.save_metadata(status="failed")
                 sys.exit(1)
         except Exception as e:
             logging.exception(f"Unhandled exception in pipeline: {e}")
+            pipeline.save_metadata(status="error")
             sys.exit(1)
     else:
         logging.error(f"Unknown command: {args.command}")

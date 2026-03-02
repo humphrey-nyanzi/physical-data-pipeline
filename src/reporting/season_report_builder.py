@@ -33,7 +33,8 @@ class SeasonReportBuilder:
         output_dir: Path,
         half_season_md: int,
         season: str = "2025/26",
-        gk_mode: bool = False
+        gk_mode: bool = False,
+        run_id: str = "manual"
     ):
         self.df = df
         self.league = league
@@ -42,6 +43,7 @@ class SeasonReportBuilder:
         self.half_season_md = half_season_md
         self.season = season
         self.gk_mode = gk_mode
+        self.run_id = run_id
         
         # Load config
         self.config_path = Path(__file__).parents[1] / "config" / "analysis_config.yaml"
@@ -94,7 +96,10 @@ class SeasonReportBuilder:
         self._add_conclusion_section()
         
         # Save
-        filename = f"{self.league}_{self.timeframe}_report{suffix}.docx"
+        # Standardized naming: {League}_{Season}_{Scope}_{Summary}_{Run_ID}.docx
+        season_filename = self.season.replace("/", "-")
+        scope = self.timeframe.title().replace('_', '')
+        filename = f"{self.league.upper()}_{season_filename}_{scope}_Report_{self.run_id}{suffix}.docx"
         output_path = self.output_dir / filename
         self.doc.save(output_path)
         logger.info(f"Report saved to {output_path}")

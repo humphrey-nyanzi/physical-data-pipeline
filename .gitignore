@@ -53,6 +53,7 @@ reports/**/*.docx
 reports/**/*.xlsx
 Output/
 logs/*.log
+outputs_archive/
 
 # Testing
 .pytest_cache/

@@ -6,39 +6,15 @@ Handles time-based filtering (season, half-season, date range) and
 league-wide aggregations.
 """
 
+import logging
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple
-import logging
+
+from src.config import constants
+from ..reporting import report_builder
 
 logger = logging.getLogger(__name__)
-
-# ============================================================================
-# Metric Definitions
-# ============================================================================
-
-VOLUME_METRICS = [
-    'distance_km', 'sprint_distance_m', 'power_plays', 'energy_kcal', 'impacts',
-    'total_accelerations', 'total_decelerations'
-]
-
-INTENSITY_METRICS = [
-    'player_load', 'top_speed_kmh', 'distance_per_min_mmin', 'power_score_wkg', 
-    'work_ratio', 'max_acceleration_mss', 'max_deceleration_mss', 
-    'acc_counts_per_min', 'dec_counts_per_min'
-]
-
-SPEED_ZONE_DIST_COLS = [
-    'distance_in_speed_zone_1_km', 'distance_in_speed_zone_2_km', 
-    'distance_in_speed_zone_3_km', 'distance_in_speed_zone_4_km', 
-    'distance_in_speed_zone_5_km'
-]
-
-SPEED_ZONE_TIME_COLS = [
-    'time_in_speed_zone_1_secs', 'time_in_speed_zone_2_secs', 
-    'time_in_speed_zone_3_secs', 'time_in_speed_zone_4_secs', 
-    'time_in_speed_zone_5_secs'
-]
 
 # ============================================================================
 # Core Filtering
@@ -76,14 +52,9 @@ def filter_data_by_timeframe(
     if timeframe == 'season':
         return df.copy()
     
-    # Extract matchday number
-    def extract_md_num(s):
-        import re
-        match = re.search(r'\d+', str(s))
-        return int(match.group()) if match else 0
-
     if 'match_day' in df.columns:
-        df['md_num'] = df['match_day'].apply(extract_md_num)
+        # Vectorized matchday number extraction
+        df['md_num'] = df['match_day'].astype(str).str.extract(r'(\d+)').fillna(0).astype(int)
         
         if timeframe == 'half_season':
             filtered_df = df[df['md_num'] <= half_season_md].copy()
@@ -120,19 +91,14 @@ def get_usage_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     stats['avg_players_per_md'] = daily_club_counts.groupby('club_for')['p_name'].mean().reset_index(name='avg_players').sort_values('avg_players', ascending=False)
     
     # 4. Total unique players captured per matchday (League Trend)
-    # Extract md number for sorting
-    import re
-    def get_sort_key(s):
-        m = re.search(r'\d+', str(s))
-        return int(m.group()) if m else 999
-        
     trend = df.groupby('match_day')['p_name'].nunique().reset_index(name='total_players')
-    trend['sort_key'] = trend['match_day'].apply(get_sort_key)
+    # Vectorized sort key extraction
+    trend['sort_key'] = trend['match_day'].astype(str).str.extract(r'(\d+)').fillna(999).astype(int)
     stats['players_per_md_trend'] = trend.sort_values('sort_key').drop(columns='sort_key')
     
     # 5. Unique clubs per matchday
     clubs_trend = df.groupby('match_day')['club_for'].nunique().reset_index(name='total_clubs')
-    clubs_trend['sort_key'] = clubs_trend['match_day'].apply(get_sort_key)
+    clubs_trend['sort_key'] = clubs_trend['match_day'].astype(str).str.extract(r'(\d+)').fillna(999).astype(int)
     stats['clubs_per_md_trend'] = clubs_trend.sort_values('sort_key').drop(columns='sort_key')
     
     return stats
@@ -166,22 +132,29 @@ def get_max_matches_players(df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
 def get_performance_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
     Compute aggregated performance stats (Volume & Intensity).
+    
+    Delegates to report_builder.get_metric_summary for consistency.
     """
-    valid_vol = [m for m in VOLUME_METRICS if m in df.columns]
-    valid_int = [m for m in INTENSITY_METRICS if m in df.columns]
+    vol_metrics = constants.VOLUME_METRICS
+    int_metrics = constants.INTENSITY_METRICS
 
+    # report_builder.get_metric_summary combines both, but returns a single table.
+    # season_analysis expects a dict with 'volume' and 'intensity' keys for Legacy reasons.
+    
     stats = {}
 
     # Volume: include sum (Total)
-    vol_stats = df[valid_vol].agg(['sum', 'mean', 'std', 'max']).T
-    vol_stats = vol_stats.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
-    stats['volume'] = vol_stats.reset_index().rename(columns={'index': 'Metric'})
+    valid_vol = [m for m in vol_metrics if m in df.columns]
+    vol_df = df[valid_vol].agg(['sum', 'mean', 'std', 'max']).T
+    vol_df = vol_df.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
+    stats['volume'] = vol_df.reset_index().rename(columns={'index': 'Metric'})
     
     # Intensity: exclude sum (Total) by setting to NaN
-    int_stats = df[valid_int].agg(['sum', 'mean', 'std', 'max']).T
-    int_stats['sum'] = np.nan # Null out the sum as it makes no analytical sense for intensity
-    int_stats = int_stats.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
-    stats['intensity'] = int_stats.reset_index().rename(columns={'index': 'Metric'})
+    valid_int = [m for m in int_metrics if m in df.columns]
+    int_df = df[valid_int].agg(['sum', 'mean', 'std', 'max']).T
+    int_df['sum'] = np.nan # Null out the sum as it makes no analytical sense for intensity
+    int_df = int_df.rename(columns={'sum': 'Total', 'mean': 'Mean', 'std': 'Std Dev', 'max': 'Max'})
+    stats['intensity'] = int_df.reset_index().rename(columns={'index': 'Metric'})
     
     return stats
 
@@ -217,26 +190,25 @@ def get_contextual_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
 
 def get_speed_zone_stats(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
-    Aggregate speed zone distances/times by position group.
+    Aggregate speed zone distances by position group.
+    
+    Delegates to report_builder.get_speed_zone_breakdown for robust multi-pattern matching.
     """
     stats = {}
     
-    if 'general_position' in df.columns:
-        df['general_position'] = df['general_position'].fillna('Unknown')
+    # Ensure general_position exists
+    if 'general_position' not in df.columns:
+        df = df.copy()
+        df['general_position'] = df.get('player_position', 'Unknown').fillna('Unknown')
     else:
-        df['general_position'] = df.get('player_position', 'Unknown')
+        df['general_position'] = df['general_position'].fillna('Unknown')
 
-    # Distance
-    valid_dist = [c for c in SPEED_ZONE_DIST_COLS if c in df.columns]
-    if valid_dist:
-        stats['dist'] = df.groupby('general_position')[valid_dist].mean()
-        stats['dist_pct'] = stats['dist'].div(stats['dist'].sum(axis=1), axis=0) * 100
-        
-    # Time
-    valid_time = [c for c in SPEED_ZONE_TIME_COLS if c in df.columns]
-    if valid_time:
-        stats['time'] = df.groupby('general_position')[valid_time].mean()
-        stats['time_pct'] = stats['time'].div(stats['time'].sum(axis=1), axis=0) * 100
+    # Use the more robust report_builder implementation
+    zone_by_position, zone_pct = report_builder.get_speed_zone_breakdown(df)
+    
+    if not zone_by_position.empty:
+        stats['dist'] = zone_by_position
+        stats['dist_pct'] = zone_pct
         
     return stats
 
@@ -244,8 +216,11 @@ def get_club_comparison(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """
     Club averages for all volume and intensity metrics.
     """
-    valid_vol = [m for m in VOLUME_METRICS if m in df.columns]
-    valid_int = [m for m in INTENSITY_METRICS if m in df.columns]
+    vol_metrics = constants.VOLUME_METRICS
+    int_metrics = constants.INTENSITY_METRICS
+    
+    valid_vol = [m for m in vol_metrics if m in df.columns]
+    valid_int = [m for m in int_metrics if m in df.columns]
     
     stats = {}
     if valid_vol:

@@ -34,48 +34,6 @@ SPLIT_NAMES = {
 }
 
 # ============================================================================
-# Core Metric Definitions
-# ============================================================================
-
-# Metrics of primary interest for analysis and reporting
-CORE_METRICS = [
-    "duration",
-    "distance_km",
-    "sprint_distance_m",
-    "power_plays",
-    "energy_kcal",
-    "impacts",
-    "player_load",
-    "top_speed_kmh",
-    "distance_per_min_mmin",
-    "power_score_wkg",
-    "work_ratio",
-    "max_acceleration_mss",
-    "max_deceleration_mss",
-    "total_accelerations",
-    "total_decelerations",
-    "total_actions",
-    "acc_counts_per_min",
-    "dec_counts_per_min",
-    # Speed zone distance columns (required for speed zone breakdown analysis)
-    "distance_in_speed_zone_1_km",
-    "distance_in_speed_zone_2_km",
-    "distance_in_speed_zone_3_km",
-    "distance_in_speed_zone_4_km",
-    "distance_in_speed_zone_5_km",
-    # Acceleration zone count columns (needed for total_accelerations computation)
-    "accelerations_zone_count:_1__2_mss",
-    "accelerations_zone_count:_2__3_mss",
-    "accelerations_zone_count:_3__4_mss",
-    "accelerations_zone_count:_>_4_mss",
-    # Deceleration zone count columns (needed for total_decelerations computation)
-    "deceleration_zone_count:_1__2_mss",
-    "deceleration_zone_count:_2__3_mss",
-    "deceleration_zone_count:_3__4_mss",
-    "deceleration_zone_count:_>_4_mss",
-]
-
-# ============================================================================
 # Metric Categories for Analysis
 # ============================================================================
 
@@ -100,6 +58,32 @@ INTENSITY_METRICS = [
     "max_deceleration_mss",
     "acc_counts_per_min",
     "dec_counts_per_min",
+]
+
+# ============================================================================
+# Core Metric Definitions
+# ============================================================================
+
+# Metrics of primary interest for analysis and reporting
+CORE_METRICS = [
+    "duration",
+] + VOLUME_METRICS + INTENSITY_METRICS + [
+    # Speed zone distance columns (required for speed zone breakdown analysis)
+    "distance_in_speed_zone_1_km",
+    "distance_in_speed_zone_2_km",
+    "distance_in_speed_zone_3_km",
+    "distance_in_speed_zone_4_km",
+    "distance_in_speed_zone_5_km",
+    # Acceleration zone count columns (needed for total_accelerations computation)
+    "accelerations_zone_count:_1__2_mss",
+    "accelerations_zone_count:_2__3_mss",
+    "accelerations_zone_count:_3__4_mss",
+    "accelerations_zone_count:_>_4_mss",
+    # Deceleration zone count columns (needed for total_decelerations computation)
+    "deceleration_zone_count:_1__2_mss",
+    "deceleration_zone_count:_2__3_mss",
+    "deceleration_zone_count:_3__4_mss",
+    "deceleration_zone_count:_>_4_mss",
 ]
 
 # ============================================================================

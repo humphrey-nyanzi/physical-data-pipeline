@@ -1,6 +1,8 @@
 # Match-Analysis: Uganda Football Data Analytics Platform
 
-A comprehensive data analysis and reporting platform for Catapult match data from Uganda's top flight football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific analysis reports.
+A comprehensive data analysis and reporting platform for Catapult match data from Uganda's top-flight football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific and league-wide analysis reports.
+
+---
 
 ## 🎯 Quick Start
 
@@ -8,7 +10,6 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 
 - Python 3.8+
 - pip (Python package manager)
-- Jupyter Notebook or VS Code with Jupyter extension
 
 ### Installation
 
@@ -42,580 +43,645 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
    # Edit .env with your settings
    ```
 
-### Running the Pipeline
+---
 
-**Unified CLI (Recommended)**
+## 🚀 Running the Pipelines
+
+All pipelines are driven through a single unified CLI entry point:
 
 ```bash
-# Full 4-phase pipeline (Config → Clean → Analyze → Report)
-# Generates both League summary and individual Club reports
-python scripts/match_analysis.py full --league upl --input data/raw/24_25_season_raw_catapult_data.csv --season 2024/25
-
-# Options:
-# --timeframe [season/half_season] (Default: season)
-# --gk (Include/Generate additional goalkeeper reports)
+python scripts/match_analysis.py <command> [options]
 ```
 
-All available options:
+Available commands: `full`, `season`, `weekly`
+
+### `full` — Complete 4-Phase Pipeline *(Recommended)*
+
+Runs Config → Clean → Analyze → Report end-to-end for a given league.
+
+```bash
+python scripts/match_analysis.py full \
+  --league upl \
+  --input data/raw/24_25_season_raw_catapult_data.csv \
+  --season 2024/25
+
+# Options:
+#   --timeframe [season|half_season]  (default: season)
+#   --gk                              Include goalkeeper reports
+#   --skip-club-reports               Skip individual club DOCX files
+```
+
+### `season` — Season / Half-Season Analysis
+
+Focused season or half-season reporting with full club-level detail.
+
+```bash
+python scripts/match_analysis.py season \
+  --league fwsl \
+  --input data/raw/24_25_season_raw_catapult_data.csv \
+  --season 2024/25 \
+  --timeframe half_season
+
+# Options:
+#   --gk                  Generate additional goalkeeper reports
+#   --skip-cleaning       Use a pre-processed CSV (skip cleaning step)
+#   --skip-club-reports   Skip individual club DOCX files
+```
+
+### `weekly` — Matchday GPS Report
+
+Processes individual-matchday Catapult CSV exports from `data/matchday_csvs/` and generates a single-matchday GPS report.
+
+```bash
+python scripts/match_analysis.py weekly \
+  --md 12 \
+  --league upl \
+  --season 2025/2026
+
+# Options:
+#   --input   Directory of matchday CSVs (default: data/matchday_csvs/)
+#   --gk      Generate an additional goalkeeper report
+```
+
+### View all options for any command
 
 ```bash
 python scripts/match_analysis.py <command> --help
 ```
 
-**Option 2: Interactive Notebook (For exploration and learning)**
+---
 
-```bash
-jupyter notebook main_pipeline.ipynb
-```
+## 🔄 Pipeline Visualisation
 
-This opens an interactive notebook where you can:
-
-- Select league (FWSL or UPL)
-- Run analysis step-by-step
-- View outputs and visualizations immediately
+> **How to read this section:**  Each tree shows the data flow for one pipeline — what goes **in**, every processing **step** and the **module responsible**, and exactly what **file** is produced and **where** it lands.  
+> To improve a specific output, find it in the tree and follow the arrow back to the step / module that created it.
 
 ---
 
-## 📊 Project Overview
+### Pipeline 1 — `full` *(Config → Clean → Analyze → Report)*
 
-### What This Project Does
+```
+📥 INPUT
+└── data/raw/<catapult_export>.csv
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 1 · Configuration                                        │
+│  src/config/league_definitions.py                               │
+│  • Load league clubs, session patterns, matchday limits         │
+│  • Load half-season cutoff from scripts/config/analysis_config  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 2 · Data Cleaning  (src/data/cleaning.py)                │
+│                                                                 │
+│  Step  1  load_raw_data()           — read raw CSV              │
+│  Step  2  standardize_columns()     — lowercase, trim           │
+│  Step  3  normalize_duration()      — seconds → minutes         │
+│  Step  3½ extract_and_save_training_data()                      │
+│  Step  4  filter_match_sessions()   — pattern-match MD# titles  │
+│  Step  5  standardize_split_names() — '1st.half' → '1st Half'  │
+│  Step  6  apply_text_cleaning()     — strip unicode/whitespace  │
+│  Step  7  extract_session_info()    — parse matchday/teams/     │
+│           (src/utils/text_parsing.py)   location/result        │
+│  Step  8  validate_matchday_logic() — drop out-of-range MDs    │
+│  Step  9  extract_player_columns()  — name, club, position      │
+│  Step 10  normalize_clubs()         — fuzzy-match to official   │
+│           (src/utils/text_cleaning.py)  club list              │
+│  Step 11  filter_gk()              — exclude goalkeepers        │
+│  Step 12  remove_duplicate_rows()                               │
+│  Step 13  drop_sparse_columns()    — drop >95% zero cols        │
+│  Step 14  aggregate_halves()       — merge H1+H2 per player     │
+│  Step 15  filter_active_sessions() — min 60 min & 2 km         │
+│  Step 16  remove_outliers()        — IQR × 1.5                 │
+│  Step 17  compute_derived_metrics()— accel/dec rates, d/min    │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+            ┌────────────┴───────────────┐
+            ▼                            ▼
+  📄 data/processed/                📄 Output/<Season>/<League>/Full/<Run_ID>/
+     UPL25_matches_clean.csv           01_cleaned/
+     FWSL25_matches_clean.csv          └── {LEAGUE}_{Season}_Full_Cleaned_{run_id}.csv
+     {LEAGUE}_training_data.csv        (reference copy for this run)
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 3 · Analysis  (src/analysis/analysis.py)                 │
+│                                                                 │
+│  • compute_summary_stats()         — per-club mean/sum/std      │
+│  • unique_players_per_club()                                    │
+│  • players_per_club_per_matchday()                              │
+│  • matchdays_per_club()                                         │
+│  • top_players_by_matchdays()      — top-10 by appearances      │
+│  • _compute_matchday_order()       — sort Md1…Md30 numerically  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │  (results held in memory, no file output at this stage)
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 4a · Per-Club Reports  (src/reporting/)                  │
+│  ClubReportBuilder → document_generation.py                     │
+│                                                                 │
+│  For every club in the league:                                  │
+│  • Table of Contents                                            │
+│  • Introduction / Methodology / Key Concepts                    │
+│  • Match Day Usage table                                        │
+│  • Player Usage table                                           │
+│  • Club Metric Results (volume & intensity)                     │
+│  • Top Players by Metric                                        │
+│  • Average Metrics per Position                                 │
+│  • Cumulative Position Metrics (volume)                         │
+│  • Club vs Season Comparison                                    │
+│  • Positional Comparison vs Season Averages                     │
+│  • Physical Performance Trends chart (rolling average)          │
+│  • Speed Zone Distribution chart                                │
+│  • Challenges / Future Plans / Conclusion                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Full/<Run_ID>/02_club_reports/
+     └── {LEAGUE}_{Season}_Full_Club_{ClubName}_Report_{run_id}.docx
+              (one file per club · e.g. UPL_2024-25_Full_Club_KCCA FC_Report_….docx)
 
-Match-Analysis processes raw Catapult sports tracking data and transforms it into:
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 4b · League-Wide Report  (src/reporting/)                │
+│  SeasonReportBuilder                                            │
+│                                                                 │
+│  • filter_data_by_timeframe()  — season or half-season slice    │
+│  • Usage statistics & coverage grid                             │
+│  • Performance stats (volume & intensity)                       │
+│  • Max performers table                                         │
+│  • Home/Away & Win/Draw/Loss contextual stats                   │
+│  • Speed zone breakdown by position                             │
+│  • Club comparison table                                        │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Full/<Run_ID>/03_league_report/
+     └── {LEAGUE}_{Season}_League_{Timeframe}_Report_{run_id}.docx
 
-1. **Cleaned Datasets** - Standardized, validated data ready for analysis
-2. **Performance Metrics** - Derived metrics like distance per minute, high-speed running efficiency, etc.
-3. **Statistical Summaries** - Team and player-level performance statistics
-4. **Professional Reports** - Word documents with visualizations and insights for each club
+┌─────────────────────────────────────────────────────────────────┐
+│  METADATA & LOGGING  (src/pipelines/base.py)                    │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Full/<Run_ID>/run_metadata.json
+  📄 logs/<Season>/<League>/{run_id}_full.log
+  📄 logs/run_history.csv                 ← appended after every run
+```
 
-### Supported Leagues
+---
 
-| League | Full Name | Teams | Season |
-|--------|-----------|-------|--------|
-| **FWSL** | FUFA Women's Football Super League | 12 | 2024-2025 |
-| **UPL** | Uganda Premier League (Men) | 16 | 2024-2025 |
+### Pipeline 2 — `season` *(Season / Half-Season Reports)*
+
+Functionally equivalent to `full` but with more explicit stage control (e.g. `--skip-cleaning`).
+
+```
+📥 INPUT
+└── data/raw/<catapult_export>.csv   (or pre-processed CSV with --skip-cleaning)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 1 · Data Cleaning  (same 17-step pipeline as `full`)     │
+│  src/data/cleaning.py  →  clean_pipeline()                      │
+│                                                                 │
+│  ⚙️  --skip-cleaning flag: bypasses cleaning and loads the      │
+│     input CSV directly (must be an already-processed file).      │
+│     Still runs validate_matchday_logic() as a safety check.     │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+            ┌────────────┴──────────────┐
+            ▼                           ▼
+  📄 data/processed/              📄 Output/<Season>/<League>/Season/<Run_ID>/
+     UPL25_matches_clean.csv          01_cleaned/
+     {LEAGUE}_training_data.csv       └── {LEAGUE}_{Season}_Season_Cleaned_{run_id}.csv
+            │
+            ▼
+  Position split (in-memory, no file):
+  df_field  → defender / midfielder / forward
+  df_gk     → goalkeeper  (only when --gk is set)
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 2 · League-Wide Report  (src/reporting/)                 │
+│  SeasonReportBuilder                                            │
+│  + season_analysis.filter_data_by_timeframe()                   │
+│                                                                 │
+│  One of:                                                        │
+│  • timeframe = "season"       → all matchdays                   │
+│  • timeframe = "half_season"  → MDs ≤ half_season_matchday cfg  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Season/<Run_ID>/03_league_report/
+     ├── {LEAGUE}_{Season}_League_{Timeframe}_Report_{run_id}.docx
+     └── {LEAGUE}_{Season}_League_{Timeframe}_Report_{run_id}_GK.docx  (if --gk)
+
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 3 · Per-Club Reports  (src/reporting/)                   │
+│  Uses legacy document_generation.py + report_builder.py         │
+│                                                                 │
+│  Per club:                                                      │
+│  • Table of Contents                                            │
+│  • Introduction / Methodology / Key Concepts                    │
+│  • Match Day Usage table      (get_matchday_stats)              │
+│  • Player Usage table         (get_players_monitored_stats)     │
+│  • Club Metric Results        (get_metric_summary)              │
+│  • Top Players by Metric      (get_top_players_by_metric)       │
+│  • Average Metrics/Position   (get_average_metrics_by_position) │
+│  • Cumulative Position Volume (get_total_metrics_by_position)   │
+│  • Club vs Season Comparison  (club_vs_season_comparison)       │
+│  • Positional vs Season Avg   (positional_comparison_vs_season) │
+│  • Rolling trend charts       (visualizations.py)               │
+│  • Speed Zone Distribution    (get_speed_zone_breakdown)        │
+│  • Challenges / Future Plans / Conclusion                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Season/<Run_ID>/02_club_reports/
+     ├── {LEAGUE}_{Season}_Season_Club_{ClubName}_Report_{run_id}.docx
+     └── {LEAGUE}_{Season}_Season_Club_{ClubName}_Report_{run_id}_GK.docx  (if --gk)
+
+  📄 Output/<Season>/<League>/Season/<Run_ID>/run_metadata.json
+  📄 logs/<Season>/<League>/{run_id}_season.log
+  📄 logs/run_history.csv
+```
+
+---
+
+### Pipeline 3 — `weekly` *(Matchday GPS Report)*
+
+Processes one matchday at a time from individual club-uploaded CSV files.
+
+```
+📥 INPUT
+└── data/matchday_csvs/*.csv     (raw per-club Catapult exports, not prefixed PROCESSED_)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  FILE DISCOVERY  (_find_csv_files)                              │
+│  • Glob *.csv in --input directory                              │
+│  • Skip files already prefixed PROCESSED_                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PER-FILE PROCESSING  (_process_files)                          │
+│  src/utils/text_parsing.py                                      │
+│  src/processing/gps_aggregation.py                              │
+│                                                                 │
+│  For each CSV file / session group:                             │
+│  1. parse_matchday()        — extract MD number from title      │
+│  2. parse_session_info()    — parse team names, location etc.   │
+│  3. extract_metrics()       — select relevant GPS columns       │
+│  4. aggregate_halves()      — combine H1 + H2 per player        │
+│  5. best_match() fuzzy      — normalise team names to official  │
+│     (src/utils/text_cleaning.py)  roster                       │
+│  6. Track uploading_teams / missing_teams vs official roster    │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  Combined DataFrame (all teams for target matchday)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  FILTERING                                                      │
+│  • compute_derived_metrics() — accel/dec totals & rates         │
+│  • Keep rows:  duration ≥ 60 min  AND  distance ≥ 2 km          │
+│  • Split:  df_field (no GKs)  /  df_gk (GKs only, if --gk)     │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  REPORT GENERATION  (src/reporting/weekly_gps_report.py)        │
+│  WeeklyGPSReportBuilder                                         │
+│                                                                 │
+│  • Matchday summary header (uploading / missing clubs)          │
+│  • Per-player GPS metrics table                                 │
+│  • Position-group averages                                      │
+│  • Speed zone breakdown                                         │
+│  • (GK variant generated separately when --gk is set)          │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+  📄 Output/<Season>/<League>/Weekly/<Run_ID>/
+     ├── {LEAGUE}_{Season}_Weekly_MD{N}_Report_{run_id}.docx
+     └── {LEAGUE}_{Season}_Weekly_GK_MD{N}_Report_{run_id}.docx   (if --gk)
+
+  📄 data/matchday_csvs/PROCESSED_<original_filename>.csv   ← renamed on success
+  📄 logs/<Season>/<League>/{run_id}_weekly.log
+  📄 logs/run_history.csv
+```
 
 ---
 
 ## 📁 Project Structure
 
-### Key Directories
-
 ```
 Match-Analysis/
 │
-├── src/                          # Core application code
-│   ├── config/                   # Configuration & definitions
-│   │   ├── constants.py          # Global settings & thresholds
-│   │   ├── league_definitions.py # Team names, positions per league
-│   │   └── metrics.py            # Metric definitions & categories
-│   │
-│   ├── data/                     # Data processing
-│   │   ├── cleaning.py           # Main cleaning pipeline
-│   │   ├── schemas.py            # Column definitions & validation rules
-│   │   └── validators.py         # Data quality checks
-│   │
-│   ├── analysis/                 # Analysis & computation
-│   │   ├── analysis.py           # Metric computation & aggregation
-│   │   └── visualizations.py     # Chart generation
-│   │
-│   ├── reporting/                # Report generation
-│   │   ├── report_builder.py     # Aggregate metrics, build sections
-│   │   ├── document_generator.py # Create Word documents
-│   │   └── formatters.py         # Styling & formatting
-│   │
-│   └── utils/                    # Utility functions
-│       ├── text_cleaning.py      # Name normalization, fuzzy matching
-│       ├── styling.py            # Word document styling
-│   └── normalization.py      # Club/position mapping
-│
-├── src/pipelines/                # Pipeline Orchestrators (Active)
-│   ├── base.py                   # Abstract base class for pipelines
-│   ├── full.py                   # Complete 4-phase workflow
-│   ├── weekly.py                 # Weekly report pipeline logic
-│   └── season.py                 # Season analysis pipeline logic
-│
-│
-├── notebooks/                    # Interactive analysis workflows
-│   ├── main_pipeline.ipynb       # Entry point (league selection)
-│   ├── 01_clean_data.ipynb       # Data cleaning workflow
-│   ├── 02_analyze_league.ipynb   # Analysis & statistics
-│   └── 03_generate_reports.ipynb # Report generation
-│
-├── data/                         # Data storage
-│   ├── raw/                      # Raw Catapult CSV exports (read-only)
-│   │   └── all_catapult_data_16_Jul_25.csv
-│   ├── processed/                # Cleaned & processed data
+├── data/
+│   ├── raw/                    # Raw Catapult CSV exports (input)
+│   ├── matchday_csvs/          # Per-matchday club uploads (weekly pipeline)
+│   ├── processed/              # Cleaned CSVs (output of cleaning step)
+│   │   ├── UPL25_matches_clean.csv
 │   │   ├── FWSL25_matches_clean.csv
-│   │   └── UPL25_matches_clean.csv
-│   └── external/                 # Reference data, notes
+│   │   └── {LEAGUE}_training_data.csv
+│   └── external/               # External reference data
 │
-├── reports/                      # Generated analysis reports
-│   ├── FWSL/                     # Women's league club reports
-│   ├── UPL/                      # Men's league club reports
-│   └── README.md                 # Report guide
+├── Output/                     # All pipeline run outputs
+│   └── <Season>/
+│       └── <LEAGUE>/
+│           ├── Full/<Run_ID>/
+│           │   ├── 01_cleaned/
+│           │   ├── 02_club_reports/
+│           │   ├── 03_league_report/
+│           │   └── run_metadata.json
+│           ├── Season/<Run_ID>/
+│           │   └── (same structure)
+│           └── Weekly/<Run_ID>/
+│               └── {LEAGUE}_{Season}_Weekly_MD{N}_Report_{run_id}.docx
 │
-├── scripts/                      # Unified CLI entry point
-│   ├── match_analysis.py         # SINGLE entry point (CLI)
-│   └── run_tests_local.py        # Local test runner
+├── logs/
+│   ├── run_history.csv         # Global log of all pipeline runs
+│   └── <Season>/<LEAGUE>/
+│       └── {run_id}_{pipeline}.log
 │
-├── tests/                        # Automated tests
-│   ├── conftest.py               # Pytest fixtures & configuration
-│   ├── test_cleaning.py          # Data cleaning tests
-│   ├── test_analysis.py          # Analysis function tests
-│   └── fixtures/                 # Test data
+├── scripts/
+│   ├── match_analysis.py       # Unified CLI entry point
+│   └── config/
+│       └── analysis_config.yaml  # Half-season matchday cutoffs
 │
-├── experiments/                  # Exploratory & experimental code
-│   ├── ash_workflow.ipynb        # Workflow exploration
-│   ├── create_infographic.ipynb  # Visual experiments
-│   └── Uganda_data.R             # R-based analysis
+├── src/
+│   ├── pipelines/
+│   │   ├── base.py             # Abstract pipeline (output dirs, logging, metadata)
+│   │   ├── full.py             # FullPipeline  (4-phase end-to-end)
+│   │   ├── season.py           # SeasonPipeline (season/half-season)
+│   │   └── weekly.py           # WeeklyPipeline (matchday GPS)
+│   │
+│   ├── data/
+│   │   ├── cleaning.py         # 17-step clean_pipeline() + all helper functions
+│   │   ├── schemas.py          # Expected column definitions
+│   │   └── validators.py       # Data integrity checks
+│   │
+│   ├── analysis/
+│   │   ├── analysis.py         # Summary stats, player rankings, matchday counts
+│   │   ├── season_analysis.py  # Timeframe filtering, club comparisons, speed zones
+│   │   └── visualizations.py   # Matplotlib charts (trends, speed zones, etc.)
+│   │
+│   ├── reporting/
+│   │   ├── club_report_builder.py    # Premium club report orchestrator (full pipeline)
+│   │   ├── season_report_builder.py  # League-wide season/half-season report builder
+│   │   ├── weekly_gps_report.py      # Weekly matchday GPS report builder
+│   │   ├── report_builder.py         # Shared data-prep helpers (metrics, tables)
+│   │   └── document_generation.py   # Low-level python-docx helpers
+│   │
+│   ├── config/
+│   │   ├── constants.py          # Thresholds, metrics, file paths, corrections
+│   │   ├── league_definitions.py # Club rosters, session patterns, max matchdays
+│   │   ├── analysis_config.yaml  # Half-season cutoff configuration
+│   │   ├── metrics.py            # Additional metric helpers
+│   │   ├── speed_zones.py        # Speed zone definitions
+│   │   └── styles.py             # Word document brand styles
+│   │
+│   ├── processing/
+│   │   └── gps_aggregation.py    # Weekly pipeline: extract_metrics, aggregate_halves
+│   │
+│   └── utils/
+│       ├── text_cleaning.py      # Club fuzzy-matching, position normalisation
+│       ├── text_parsing.py       # Session title parsing (matchday, teams, result)
+│       └── styling.py            # Document styling helpers
 │
-├── logs/                         # Pipeline execution logs
-├── outputs/                      # Generated outputs (charts, etc.)
-├── docs/                         # Additional documentation
-│
-└── Configuration Files
-    ├── requirements.txt          # Python dependencies
-    ├── .gitignore               # Git exclusions
-    ├── .env.example             # Environment template
-    └── README.md                # This file
+├── experiments/                  # Exploratory / prototyping code
+├── notebook_archive/             # Legacy Jupyter notebooks
+├── requirements.txt
+└── .env                          # Environment overrides (optional)
 ```
 
 ---
 
-## 🔄 Data Pipeline
+## 📊 Output Reference
 
-### Workflow Overview
-
-```
-Raw Data (CSVs)
-       ↓
-[1. CLEANING] → Standardize columns, filter matches, normalize names
-       ↓
-Processed Data (CSVs)
-       ↓
-[2. ANALYSIS] → Compute metrics, aggregate by player/club, calculate stats
-       ↓
-Metrics & Statistics
-       ↓
-[3. REPORTING] → Generate Word documents with tables, charts, insights
-       ↓
-Club Reports (DOCX)
-```
-
-### Step 1: Data Cleaning
-
-**Input:** Raw Catapult CSV exports  
-**Output:** Cleaned, validated CSVs
-
-```python
-from src.data.cleaning import clean_matches
-
-# Clean FWSL data
-df = clean_matches(league='fwsl')
-df.to_csv('data/processed/FWSL25_matches_clean.csv', index=False)
-```
-
-**What happens:**
-
-- Column standardization (lowercase, trim whitespace)
-- Filter to match sessions only (exclude practice)
-- Club name normalization (fuzzy matching to standard names)
-- Position categorization (GK → Goalkeeper, DEF → Defender, etc.)
-- Data validation (check missing data, detect outliers)
-- Derived metrics (per-minute distance, efficiency scores)
-
-### Step 2: Analysis
-
-**Input:** Cleaned CSVs  
-**Output:** Performance metrics and statistics
-
-```python
-from src.analysis.analysis import load_processed_data, compute_match_metrics
-
-df = load_processed_data('fwsl')
-metrics = compute_match_metrics(df)
-summary = compute_summary_statistics(df, by_position=True)
-```
-
-**Key Metrics:**
-
-- **Volume:** Total distance, sprints, accelerations
-- **Intensity:** Player load, max speed, top acceleration
-- **Efficiency:** Distance per minute, actions per minute
-
-### Step 3: Reporting
-
-**Input:** Aggregated metrics  
-**Output:** Professional Word documents
-
-```python
-from src.reporting.document_generator import create_club_report
-
-create_club_report(
-    club='Amus College WFC',
-    league='fwsl',
-    output_path='reports/FWSL/Amus_College_WFC_report.docx'
-)
-```
-
-**Report Contents:**
-
-- Team summary & key statistics
-- Player profiles & rankings
-- Performance charts & visualizations
-- Trends over the season
-- Benchmarking against league averages
+| Output File | Produced By | Location |
+|---|---|---|
+| `UPL25_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
+| `FWSL25_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
+| `{LEAGUE}_training_data.csv` | `extract_and_save_training_data()` | `data/processed/` |
+| `{LEAGUE}_…_Full_Cleaned_….csv` | `FullPipeline._phase_2_cleaning()` | `Output/…/Full/<Run>/01_cleaned/` |
+| `{LEAGUE}_…_Full_Club_{Club}_Report_….docx` | `ClubReportBuilder.build()` | `Output/…/Full/<Run>/02_club_reports/` |
+| `{LEAGUE}_…_League_{Timeframe}_Report_….docx` | `SeasonReportBuilder.build_report()` | `Output/…/Full/<Run>/03_league_report/` |
+| `{LEAGUE}_…_Season_Cleaned_….csv` | `SeasonPipeline.run()` | `Output/…/Season/<Run>/01_cleaned/` |
+| `{LEAGUE}_…_Season_Club_{Club}_Report_….docx` | `SeasonPipeline._generate_club_reports()` | `Output/…/Season/<Run>/02_club_reports/` |
+| `{LEAGUE}_…_Weekly_MD{N}_Report_….docx` | `WeeklyGPSReportBuilder.build_report()` | `Output/…/Weekly/<Run>/` |
+| `PROCESSED_<original>.csv` | `WeeklyPipeline._rename_files()` | `data/matchday_csvs/` |
+| `run_metadata.json` | `AnalysisPipeline.save_metadata()` | `Output/…/<Pipeline>/<Run>/` |
+| `{run_id}_{pipeline}.log` | `AnalysisPipeline.setup_run_context()` | `logs/<Season>/<League>/` |
+| `run_history.csv` | `AnalysisPipeline._update_run_history_csv()` | `logs/` |
 
 ---
 
 ## 📈 Data Schema
 
-### Processed Data Columns
+### Cleaned Data Columns (`data/processed/*.csv`)
 
 | Column | Type | Description |
 |--------|------|-------------|
-| **match_date** | datetime | Date of the match |
-| **club** | string | Club/team name (normalized) |
-| **league** | string | 'FWSL' or 'UPL' |
-| **player_name** | string | Player name |
-| **position** | string | Raw position (e.g., "CB", "CAM") |
-| **position_category** | string | Standardized category (GK/DEF/MID/FWD) |
-| **minutes_played** | float | Minutes in match |
-| **total_distance_km** | float | Total distance covered (km) |
-| **high_speed_distance_km** | float | Distance at >6 m/s (km) |
-| **sprint_distance_km** | float | Distance at >7 m/s (km) |
-| **total_accel_events** | int | Acceleration events |
-| **total_decel_events** | int | Deceleration events |
-| **avg_velocity_ms** | float | Average velocity (m/s) |
-| **max_velocity_ms** | float | Peak velocity (m/s) |
-| **player_load** | float | Intensity score |
-| **per_minute_distance** | float | Distance per minute (km/min) |
+| `p_name` | string | Player name |
+| `club_for` | string | Player's club (normalised) |
+| `club_against` | string | Opponent club |
+| `match_day` | string | Matchday label (e.g. `Md12`) |
+| `general_position` | string | Standardised position (`goalkeeper`, `defender`, `midfielder`, `forward`) |
+| `player_position` | string | Raw position code (e.g. `CB`, `CAM`) |
+| `location` | string | `Home` or `Away` |
+| `result` | string | `Win`, `Loss`, or `Draw` |
+| `duration` | float | Minutes played |
+| `distance_km` | float | Total distance (km) |
+| `sprint_distance_m` | float | Sprint distance (m) |
+| `player_load` | float | Catapult Player Load score |
+| `top_speed_kmh` | float | Peak speed (km/h) |
+| `total_accelerations` | int | Summed acceleration zone counts |
+| `total_decelerations` | int | Summed deceleration zone counts |
+| `total_actions` | int | `total_accelerations + total_decelerations` |
+| `acc_counts_per_min` | float | Acceleration rate (/min) |
+| `dec_counts_per_min` | float | Deceleration rate (/min) |
+| `distance_per_min_mmin` | float | Distance rate (m/min) |
+| `energy_kcal` | float | Energy expenditure (kcal) |
+| `power_plays` | int | Power play count |
+| `work_ratio` | float | Work ratio (from 'All' split) |
+| `distance_in_speed_zone_N_km` | float | Distance in speed zone 1–5 (km) |
 
-See [data/processed/README.md](data/processed/README.md) for full schema.
+---
+
+## ⚙️ Configuration
+
+### Key Tuning Points
+
+| What to change | File | Variable/Key |
+|---|---|---|
+| Minimum match duration | `src/config/constants.py` | `MIN_SESSION_DURATION_MINUTES` |
+| Minimum match distance | `src/config/constants.py` | `MIN_SESSION_DISTANCE_KM` |
+| Outlier detection sensitivity | `src/config/constants.py` | `OUTLIER_IQR_MULTIPLIER` |
+| Sparse column threshold | `src/config/constants.py` | `SPARSE_COLUMN_THRESHOLD` |
+| Club name corrections (FWSL) | `src/config/constants.py` | `CLUB_CORRECTIONS_FWSL` |
+| Club name corrections (UPL) | `src/config/constants.py` | `CLUB_CORRECTIONS_UPL` |
+| Half-season cutoff matchday | `scripts/config/analysis_config.yaml` | `season_report.half_season_matchday` |
+| Official club roster | `src/config/league_definitions.py` | `LEAGUE_CONFIG[league]['clubs']` |
+| Position mapping | `src/config/league_definitions.py` | `POSITION_MAPPING`, `POSITION_ALIASES` |
+| Session title regex pattern | `src/config/league_definitions.py` | `get_league_session_pattern()` |
+| Volume / intensity metrics | `src/config/constants.py` | `VOLUME_METRICS`, `INTENSITY_METRICS` |
+| Report brand styles | `src/config/styles.py` | `ReportStyles` |
+
+### Environment Variables (`.env`)
+
+```bash
+LOG_LEVEL=INFO
+
+DATA_DIR=./data/
+RAW_DATA_DIR=./data/raw/
+PROCESSED_DATA_DIR=./data/processed/
+OUTPUT_DIR=./Output/
+```
 
 ---
 
 ## 🛠️ Key Modules
 
-### `src.config.constants`
+### `src.data.cleaning` — `clean_pipeline()`
 
-Global configuration, thresholds, and settings.
+The entire 17-step cleaning sequence in a single call:
 
 ```python
-from src.config import constants
+from src.data.cleaning import clean_pipeline
 
-# Validation thresholds
-MIN_SESSION_DURATION_MINUTES = 60
-OUTLIER_IQR_MULTIPLIER = 1.5
-SPARSE_COLUMN_THRESHOLD = 0.95
-
-# File paths
-RAW_DATA_FILE = './data/raw/all_catapult_data_16_Jul_25.csv'
-FWSL_PROCESSED_OUTPUT = 'FWSL25_matches_clean.csv'
+cleaned_df, output_path = clean_pipeline(
+    raw_path="data/raw/my_export.csv",
+    league="upl",
+    season="2024/25"
+)
 ```
 
-### `src.data.cleaning`
-
-Main data cleaning functions.
+Individual steps are also importable if you need to replay just one stage:
 
 ```python
 from src.data.cleaning import (
-    load_raw_data,
-    standardize_columns,
-    filter_match_sessions,
-    clean_matches
+    load_raw_data, standardize_columns, filter_match_sessions,
+    aggregate_halves, compute_derived_metrics, save_processed
 )
-
-# Quick start
-df = clean_matches(league='fwsl')
 ```
 
-### `src.analysis.analysis`
-
-Metric computation and aggregation.
+### `src.analysis.season_analysis` — Timeframe Filtering
 
 ```python
-from src.analysis.analysis import (
-    load_processed_data,
-    compute_match_metrics,
-    compute_summary_statistics,
-    aggregate_by_position
-)
+from src.analysis.season_analysis import filter_data_by_timeframe
 
-df = load_processed_data('upl')
-team_stats = compute_summary_statistics(df, by_position=True)
+df_half = filter_data_by_timeframe(
+    df, timeframe="half_season", league="upl", half_season_md=15
+)
 ```
 
-### `src.reporting.document_generator`
-
-Generate Word documents.
+### `src.utils.text_cleaning` — Club Fuzzy Matching
 
 ```python
-from src.reporting.document_generator import create_club_report
+from src.utils.text_cleaning import best_match
 
-create_club_report(
-    club='BUL FC',
-    league='upl',
-    output_path='reports/UPL/BUL_FC_report.docx'
-)
+canonical = best_match("Solitilo Bright Stars", official_clubs, min_score=0.5)
+# → "Soltilo Bright Stars FC"
 ```
 
 ---
 
 ## 📚 League Information
 
-### FWSL (Uganda Women's Football Super League)
+### FWSL (FUFA Women's Super League)
 
-**Teams (12):**
+**Season:** 2024-2025 · **Teams (12):**
 
-- Amus College WFC
-- Kawempe Muslim LFC
-- Kampala Queens FC
-- Lady Doves FC
-- Makerere University WFC
-- Olila HS WFC
-- Rines SS WFC
-- She Corporates FC
-- She Maroons FC
-- Uganda Martyrs Lubaga WFC
-- Wakiso Hill WFC
-- (More teams may be added)
+Amus College WFC · Kawempe Muslim LFC · Kampala Queens FC · Lady Doves FC · Makerere University WFC · Olila HS WFC · Rines SS WFC · She Corporates FC · She Maroons FC · Uganda Martyrs Lubaga WFC · Wakiso Hill WFC
 
-**Season:** 2024-2025
+Session title format: `WMd<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
 ### UPL (Uganda Premier League)
 
-**Teams (16):**
+**Season:** 2024-2025 · **Teams (16):**
 
-- BUL FC
-- KCCA FC
-- SC Villa
-- Vipers SC
-- Express FC
-- Kitara FC
-- Lugazi FC
-- Maroons FC
-- Mbale Heroes FC
-- Mbarara City FC
-- NEC FC
-- Police FC
-- Soltilo Bright Stars FC
-- UPDF FC
-- URA FC
-- Wakiso Giants FC
+BUL FC · KCCA FC · SC Villa · Vipers SC · Express FC · Kitara FC · Lugazi FC · Maroons FC · Mbale Heroes FC · Mbarara City FC · NEC FC · Police FC · Soltilo Bright Stars FC · UPDF FC · URA FC · Wakiso Giants FC
 
-**Season:** 2024-2025
-
----
-
-
-
-## 📊 Output Examples
-
-### Generated Reports
-
-**Location:** `reports/FWSL/` and `reports/UPL/`
-
-Each report includes:
-
-- **Executive Summary** - Season overview, key statistics
-- **Player Profiles** - Individual performance tables
-- **Performance Metrics** - Distance, sprints, accelerations
-- **Visualizations** - Charts and trend lines
-- **Benchmarking** - Comparison to league averages
-
-### Data Outputs
-
-**Location:** `data/processed/`
-
-- `FWSL25_matches_clean.csv` - All FWSL matches and player performances
-- `UPL25_matches_clean.csv` - All UPL matches and player performances
-
-### Logs
-
-**Location:** `logs/`
-
-Pipeline execution logs for debugging and monitoring.
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and customize:
-
-```bash
-# Logging
-LOG_LEVEL=INFO
-
-# Paths
-DATA_DIR=./data/
-RAW_DATA_DIR=./data/raw/
-PROCESSED_DATA_DIR=./data/processed/
-OUTPUT_DIR=./outputs/
-REPORT_DIR=./reports/
-
-# Thresholds
-MIN_SESSION_DURATION_MINUTES=60
-OUTLIER_IQR_MULTIPLIER=1.5
-```
-
-### Constants
-
-Edit [src/config/constants.py](src/config/constants.py) for:
-
-- Minimum session duration
-- Outlier detection thresholds
-- Column name mappings
-- Club name corrections
-- Report styling
-
----
-
-## 🚀 Advanced Usage
-
-### Custom Analysis
-
-```python
-import pandas as pd
-from src.data.cleaning import clean_matches
-from src.analysis.analysis import compute_summary_statistics
-
-# Load cleaned data
-df = clean_matches(league='fwsl')
-
-# Filter to specific team
-team_data = df[df['club'] == 'Amus College WFC']
-
-# Compute custom statistics
-stats = team_data.groupby('position_category').agg({
-    'total_distance_km': 'mean',
-    'player_load': 'max',
-    'minutes_played': 'sum'
-})
-
-print(stats)
-```
-
-### Batch Processing
-
-```python
-from src.reporting.document_generator import create_club_report
-from src.config.league_definitions import get_league_clubs
-
-# Generate reports for all FWSL teams
-for club in get_league_clubs('fwsl'):
-    create_club_report(
-        club=club,
-        league='fwsl',
-        output_path=f'reports/FWSL/{club}_report.docx'
-    )
-```
-
-### Data Export
-
-```python
-import pandas as pd
-from src.data.cleaning import clean_matches
-
-df = clean_matches(league='upl')
-
-# Export to Excel
-df.to_excel('outputs/UPL_analysis.xlsx', index=False)
-
-# Export to JSON
-df.to_json('outputs/UPL_analysis.json', orient='records')
-
-# Export filtered data
-forwards = df[df['position_category'] == 'FWD']
-forwards.to_csv('outputs/forwards_analysis.csv', index=False)
-```
+Session title format: `Md<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Issue: "Module not found" errors
+### Zero output rows after cleaning
 
-**Solution:** Ensure Python path includes project root
+The most common cause is the session-title filter. Check that your raw CSV session titles match the expected format:
 
-```bash
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+```
+# FWSL: WMd01 - Amus College WFC - Kawempe Muslim LFC - Home - League - Win
+# UPL:  Md12 - KCCA FC - BUL FC - Away - League - Draw
 ```
 
-Or in Python:
+Adjust the pattern in `src/config/league_definitions.py → get_league_session_pattern()` if needed.
+
+### Club names not matching
+
+Add a manual correction in `src/config/constants.py`:
 
 ```python
-import sys
-sys.path.insert(0, '/path/to/Match-Analysis')
-```
-
-### Issue: Raw data file not found
-
-**Solution:** Check file path in [src/config/constants.py](src/config/constants.py)
-
-```python
-RAW_DATA_FILE = "./data/raw/all_catapult_data_16_Jul_25.csv"
-```
-
-### Issue: Club names not matching
-
-**Solution:** Add mapping to `CLUB_CORRECTIONS_*` in [src/config/constants.py](src/config/constants.py)
-
-```python
-CLUB_CORRECTIONS_FWSL = {
-    "Typo Name": "Correct Name",
+CLUB_CORRECTIONS_UPL = {
+    "Typo Name": "Correct Canonical Name",
 }
 ```
 
-### Issue: Slow data processing
+Or lower the fuzzy-match threshold in `normalize_clubs()` (`min_score=0.5`).
 
-**Solution:** Check data size, filter by league/date before analysis
+### "Module not found" errors
 
-```python
-df = clean_matches(league='fwsl')  # Process one league at a time
-df_recent = df[df['match_date'] >= '2025-01-01']  # Filter by date
+Ensure the project root is on the Python path:
+
+```bash
+# Windows PowerShell
+$env:PYTHONPATH = "$(pwd)"
+
+# bash
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ```
 
----
+### Slow processing
 
-## 📖 Documentation Structure
+```python
+# Process one league at a time
+cleaned_df, _ = clean_pipeline(raw_path="...", league="fwsl", season="2024/25")
 
-- **[README.md](README.md)** - This file (project overview)
-- **[data/raw/README.md](data/raw/README.md)** - Raw data source info
-- **[data/processed/README.md](data/processed/README.md)** - Processed data schema
-- **[reports/README.md](reports/README.md)** - Report format & contents
-- **[notebooks/README.md](notebooks/README.md)** - Notebook workflow guide
-- **[experiments/README.md](experiments/README.md)** - Experimental code notes
-- **[src/config/constants.py](src/config/constants.py)** - Inline configuration docs
+# Filter by date range after cleaning
+df_recent = cleaned_df[cleaned_df["match_day"].str.extract(r"(\d+)")[0].astype(int) >= 10]
+```
 
 ---
 
 ## 🤝 Contributing
 
-### Development Workflow
-
-1. Create feature branch: `git checkout -b feature/my-feature`
-2. Make changes and write tests
+1. Create a feature branch: `git checkout -b feature/my-feature`
+2. Make changes and add tests in `tests/`
 3. Run tests: `pytest`
-4. Commit: `git commit -m "Add my feature"`
-5. Push: `git push origin feature/my-feature`
-6. Create Pull Request
+4. Commit with a clear message
+5. Open a Pull Request
 
-### Code Style
+**Code style:** PEP 8, type hints, docstrings on all public functions.
 
-- Follow PEP 8
-- Use type hints where possible
-- Document functions with docstrings
-- Write tests for new features
+**Adding a new pipeline:** Subclass `AnalysisPipeline` in `src/pipelines/`, implement `name`, `register_arguments`, and `run`, then register it in `scripts/match_analysis.py`.
 
-### Adding New Features
+**Adding a new metric:** Define it in `src/config/constants.py` (`VOLUME_METRICS` or `INTENSITY_METRICS`), implement computation in `src/data/cleaning.py → compute_derived_metrics()`, and add a display name to `METRIC_DISPLAY_NAMES`.
 
-1. Add function to appropriate `src/` module
-2. Add tests in `tests/`
-3. Update documentation
-4. Update notebooks if user-facing
+---
+
+## 🗺️ Roadmap
+
+- [ ] Interactive web dashboard for data exploration
+- [ ] Player benchmarking across leagues
+- [ ] Injury risk prediction models
+- [ ] Tactical analysis (positioning, heat maps)
+- [ ] PDF / HTML export variants
 
 ---
 
@@ -623,38 +689,16 @@ df_recent = df[df['match_date'] >= '2025-01-01']  # Filter by date
 
 **Data Source:** Catapult Sports tracking data  
 **Leagues:** FWSL (Uganda Women's Football Super League), UPL (Uganda Premier League)  
-**Organization:** FUFA-RST (Federation of Uganda Football Associations - Research, Science and Technology Team)
+**Organisation:** FUFA-RST (Federation of Uganda Football Associations — Research, Science & Technology)
 
 ---
 
 ## 📧 Contact & Support
 
-For questions, issues, or suggestions:
-
 - **Repository:** <https://github.com/fufa-rst/Match-Analysis>
 - **Issues:** GitHub Issues tracker
-- **Documentation:** See `/docs` folder
 
 ---
 
-## 🗺️ Project Roadmap
-
-- [ ] Interactive web dashboard for data exploration
-- [ ] Player benchmarking across leagues
-- [ ] Injury risk prediction models
-- [ ] Tactical analysis (positioning, heat maps)
-- [ ] Export to additional formats (PDF, HTML)
-
----
-
-## 📚 Additional Resources
-
-- **Catapult Documentation:** [Catapult Sports](https://www.catapultsports.com/)
-- **Pandas Guide:** [pandas.pydata.org](https://pandas.pydata.org/)
-- **Python-docx Guide:** [python-docx.readthedocs.io](https://python-docx.readthedocs.io/)
-- **Jupyter Notebooks:** [jupyter.org](https://jupyter.org/)
-
----
-
-**Last Updated:** January 2, 2026  
-**Version:** 1.0
+**Last Updated:** March 2026  
+**Version:** 2.0

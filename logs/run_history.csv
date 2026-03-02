@@ -1,0 +1,7 @@
+run_id,timestamp,pipeline,league,season,status,input_file,output_dir
+20260302_125907,2026-03-02T12:59:07.982743,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_125907
+20260302_130551,2026-03-02T13:05:51.589544,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_130551
+20260302_131048,2026-03-02T13:10:48.513247,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_131048
+20260302_131625,2026-03-02T13:16:25.912208,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_131625
+20260302_132006,2026-03-02T13:20:06.966299,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_132006
+20260302_133335,2026-03-02T13:33:35.895553,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_133335

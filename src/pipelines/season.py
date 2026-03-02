@@ -75,13 +75,12 @@ class SeasonPipeline(AnalysisPipeline):
         return True
 
     def run(self) -> bool:
-        self.setup_output_dir()
-        
         league = self.args.league.lower()
         raw_path = self.args.input
         timeframe = self.args.timeframe
+        season_str = self.args.season.replace("/", "-")
         
-        self.log(f"Starting Season Analysis for {league.upper()}")
+        self.log(f"Starting Season Analysis for {league.upper()} ({self.args.season})")
         
         # --- Phase 1 & 2: Cleaning ---
         if not self.args.skip_cleaning:
@@ -95,10 +94,13 @@ class SeasonPipeline(AnalysisPipeline):
                     include_gk=self.args.gk
                 )
                 self.log(f"Cleaning complete. Rows: {len(cleaned_df)}")
+                self.update_metrics({"total_rows_cleaned": len(cleaned_df)})
                 
                 # Save cleaned data to output dir for reference
-                clean_save_path = self.output_dir / "01_cleaned" / f"{league}_cleaned.csv"
-                clean_save_path.parent.mkdir(parents=True, exist_ok=True)
+                clean_dir = self.output_dir / "01_cleaned"
+                clean_dir.mkdir(parents=True, exist_ok=True)
+                clean_filename = f"{league.upper()}_{season_str}_Season_Cleaned_{self.run_id}.csv"
+                clean_save_path = clean_dir / clean_filename
                 cleaned_df.to_csv(clean_save_path, index=False)
                 self.log(f"Saved cleaned data to {clean_save_path}")
                 
@@ -110,6 +112,7 @@ class SeasonPipeline(AnalysisPipeline):
             try:
                 cleaned_df = pd.read_csv(raw_path)
                 self.log(f"Loaded pre-processed data. Rows: {len(cleaned_df)}")
+                self.update_metrics({"total_rows_loaded": len(cleaned_df)})
                 # Safety validation for pre-processed data
                 cleaned_df = cleaning.validate_matchday_logic(cleaned_df, league)
             except Exception as e:
@@ -281,7 +284,9 @@ class SeasonPipeline(AnalysisPipeline):
                     doc.add_page_break()
                     add_conclusion_section(doc, season=self.args.season)
                     
-                    save_document(doc, str(reports_dir), f"{club}_report{suffix}.docx")
+                    season_filename = self.args.season.replace("/", "-")
+                    filename = f"{league.upper()}_{season_filename}_Season_Club_{club}_Report_{self.run_id}{suffix}.docx"
+                    save_document(doc, str(reports_dir), filename)
                     count += 1
                     
                 except Exception as e:
@@ -323,7 +328,7 @@ class SeasonPipeline(AnalysisPipeline):
             
             builder = SeasonReportBuilder(
                 filtered_df, league, timeframe, report_dir, half_season_limit, 
-                season=self.args.season, gk_mode=(suffix == "_GK")
+                season=self.args.season, gk_mode=(suffix == "_GK"), run_id=self.run_id
             )
             output_path = builder.build_report(suffix=suffix)
             self.log(f"League report generated: {output_path}")

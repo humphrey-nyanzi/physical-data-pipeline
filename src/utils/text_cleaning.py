@@ -9,6 +9,7 @@ import re
 import pandas as pd
 from typing import List, Optional, Tuple
 import difflib
+from functools import lru_cache
 
 
 def clean_text(s: str) -> str:
@@ -72,58 +73,35 @@ def normalize_name(name: str) -> str:
     name = name.replace("fc", "").replace("sc", "")
     return name
 
-
-def best_match(name: str, club_list: List[str], min_score: float = 0.6, return_original: bool = True) -> Optional[str]:
-    """
-    Find the best matching club name from a list using fuzzy matching.
-
-    Uses a three-tier matching strategy:
-    1. Normalized exact match (after removing non-alpha chars)
-    2. Normalized substring match
-    3. Token overlap scoring (Jaccard-like similarity)
-
-    Args:
-        name (str): Name to match (e.g., "Kampala Queens", "KCCA F.C.")
-        club_list (List[str]): List of standard club names to match against
-        min_score (float): Minimum similarity score (0-1) for token overlap.
-                          Default 0.6 is conservative; increase for stricter matching.
-        return_original (bool): If True, returns original name if no match found.
-                               If False, returns None.
-
-    Returns:
-        Optional[str]: Best matching club name, or (original name OR None) if no good match.
-    """
+@lru_cache(maxsize=1024)
+def _best_match_cache_wrapper(name: str, club_tuple: Tuple[str, ...], min_score: float, return_original: bool) -> Optional[str]:
+    """Internal cached version of best_match."""
     name_clean = name.strip().lower().replace(".", "")
     norm_name = normalize_name(name_clean)
 
     # 1. Try exact normalized match first
-    for club in club_list:
+    for club in club_tuple:
         if norm_name == normalize_name(club):
             return club
 
     # 2. Try substring match on normalized names
-    for club in club_list:
+    for club in club_tuple:
         club_norm = normalize_name(club)
         if norm_name in club_norm or club_norm in norm_name:
             return club
 
     # 3. Standard Library Fuzzy Matching (difflib)
-    # This captures typos and close string resemblances better than token overlap
-    # We use a slightly adjusted cutoff based on min_score
-    matches = difflib.get_close_matches(name.title(), club_list, n=1, cutoff=min_score)
+    matches = difflib.get_close_matches(name.title(), club_tuple, n=1, cutoff=min_score)
     if matches:
         return matches[0]
 
-    # 4. Token overlap scoring (Fallback for multi-word misalignments)
-    # Split on spaces/punctuation, score based on matching tokens
+    # 4. Token overlap scoring
     name_tokens = set(name_clean.split())
     best = None
     best_score = 0
 
-    for club in club_list:
+    for club in club_tuple:
         club_tokens = set(club.strip().lower().replace(".", "").split())
-
-        # Jaccard-like score: intersection / union
         intersection = len(name_tokens & club_tokens)
         union = max(len(club_tokens), 1)
         score = intersection / union
@@ -136,6 +114,17 @@ def best_match(name: str, club_list: List[str], min_score: float = 0.6, return_o
         return best
     
     return name if return_original else None
+
+def best_match(name: str, club_list: List[str], min_score: float = 0.6, return_original: bool = True) -> Optional[str]:
+    """
+    Find the best matching club name from a list using fuzzy matching.
+    
+    Optimized with LRU cache to handle large datasets efficiently.
+    """
+    if not name or pd.isna(name):
+        return name if return_original else None
+    
+    return _best_match_cache_wrapper(name, tuple(club_list), min_score, return_original)
 
 
 def normalize_club_names(
@@ -320,7 +309,7 @@ def apply_text_cleaning_to_columns(
         columns = [col for col in df.columns if df[col].dtype == "object"]
 
     for col in columns:
-        if col in df.columns:
+        if col in df.columns and df[col].dtype == object:
             df[col] = df[col].astype(str).apply(clean_text)
 
     return df

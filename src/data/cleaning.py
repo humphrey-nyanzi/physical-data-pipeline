@@ -173,36 +173,8 @@ def filter_match_sessions(df: pd.DataFrame, league: str) -> pd.DataFrame:
     return df
 
 
-def clean_text(s):
-    """Apply text cleaning: strip, normalize spaces, title case."""
-    if pd.isnull(s):
-        return s
-    s = s.strip()
-    s = re.sub(r'\s+', ' ', s)
-    s = s.lower()
-    s = s.title()
-    return s
 
 
-def clean_all_text_columns(df: pd.DataFrame, exclude_cols: Optional[List[str]] = None) -> pd.DataFrame:
-    """
-    Apply text cleaning to ALL object columns except those in exclude_cols.
-    
-    **CRITICAL**: This must happen BEFORE split_name aggregation.
-    Ensures '1St.Half' → '1st Half', etc.
-    
-    Args:
-        df: Input dataframe
-        exclude_cols: Column names to SKIP during text cleaning (e.g., ['split_name'])
-    """
-    df = df.copy()
-    if exclude_cols is None:
-        exclude_cols = []
-    
-    cat_cols = [col for col in df.columns if df[col].dtype == 'object' and col not in exclude_cols]
-    for col in cat_cols:
-        df[col] = df[col].astype(str).apply(clean_text)
-    return df
 
 
 def standardize_split_names(df: pd.DataFrame) -> pd.DataFrame:
@@ -245,18 +217,29 @@ def standardize_split_names(df: pd.DataFrame) -> pd.DataFrame:
     df['split_name'] = df['split_name'].str.replace('all', 'All', regex=False)
     
     return df
-    
-    return df
 
 
 def extract_session_info(df: pd.DataFrame) -> pd.DataFrame:
-    """Extract matchday, teams, location, league, and result from session_title."""
+    """
+    Extract matchday, teams, location, league, and result from session_title.
+
+    Parses the standard Catapult session title format:
+    'MD# - Team A - Team B - Location - League - Result'
+
+    Args:
+        df: Input dataframe with 'session_title' column.
+
+    Returns:
+        Dataframe with additional columns: 'match_day', 'club_for', 'club_against', 
+        'location', 'league', and 'result'.
+    """
     if "session_title" not in df.columns:
         return df
 
     df = df.copy()
 
     # 1. Clean the session title
+    # Note: re-processing with str.replace(r"\s*-\s*", "-") ensures exactly one hyphen separator
     df["session_title"] = (
         df["session_title"]
         .astype(str)
@@ -268,15 +251,16 @@ def extract_session_info(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # 2. Extract session components
-    # Support both UPL (Md\d+) and FWSL (Wmd\d+) formats
+    # Support both UPL (Md \d+) and FWSL (Wmd \d+) formats, with or without spaces
+    # We use a non-greedy approach for teams to handle potential hyphens in names gracefully
     session_regex = re.compile(
-        r"^(W?Md\d+)-"
-        r"(.+?)-"
-        r"(.+?)-"
-        r"(.+?)"
-        r"[-\s]+(.+?)"
-        r"[-\s]+(.+?)"
-        r"(?:\s|$)",
+        r"^(W?Md\s*\d+)-"      # Group 1: match_day (e.g. Md 01 or Md01)
+        r"(.+?)-"              # Group 2: club_for
+        r"(.+?)-"              # Group 3: club_against
+        r"([^-]+)"             # Group 4: Part 1
+        r"(?:-([^-]+))?"       # Group 5: Part 2 (Optional)
+        r"(?:-([^-]+))?"       # Group 6: Part 3 (Optional)
+        r"(?:\s|$)",           # End of relevant content
         re.IGNORECASE,
     )
 
@@ -298,21 +282,22 @@ def extract_session_info(df: pd.DataFrame) -> pd.DataFrame:
     league_set = {"League", "Cup"}
     result_set = {"Win", "Loss", "Draw"}
 
-    extracted["location"] = None
-    extracted["league"] = None
-    extracted["result"] = None
+    # Vectorized extraction of location, league, and result
+    # We check all three potential parts (part1, part2, part3) for matches in the sets
+    def get_component(row, valid_set):
+        for col in ['part1', 'part2', 'part3']:
+            val = str(row[col]).strip().title() if pd.notna(row[col]) else None
+            if val in valid_set:
+                return val
+        return None
 
-    for i, row in extracted.iterrows():
-        for val in [row["part1"], row["part2"], row["part3"]]:
-            if pd.isna(val):
-                continue
-            val_clean = val.strip().title()
-            if val_clean in location_set:
-                extracted.at[i, "location"] = val_clean
-            elif val_clean in league_set:
-                extracted.at[i, "league"] = val_clean
-            elif val_clean in result_set:
-                extracted.at[i, "result"] = val_clean
+    extracted["location"] = extracted.apply(get_component, axis=1, valid_set=location_set)
+    extracted["league"] = extracted.apply(get_component, axis=1, valid_set=league_set)
+    extracted["result"] = extracted.apply(get_component, axis=1, valid_set=result_set)
+
+    # Note: apply(axis=1) is better than iterrows, but for even more speed we could
+    # use vectorized set membership if we melt the dataframe, but this is a good first step.
+    # Given the small number of columns (3 parts), this is significantly faster than iterrows.
 
     # Keep only fully matched rows
     initial_count = len(df)
@@ -345,7 +330,9 @@ def validate_matchday_logic(df: pd.DataFrame, league: str) -> pd.DataFrame:
     config = league_definitions.get_league_config(league)
     max_md = config.get("max_matchdays", 30)
 
-    md_numeric = df["match_day"].str.extract(r"(\d+)")[0].astype(float)
+    md_numeric = pd.to_numeric(
+        df["match_day"].str.extract(r"(\d+)")[0], errors="coerce"
+    )
     invalid_mask = md_numeric > max_md
 
     if invalid_mask.any():
@@ -373,33 +360,14 @@ def extract_player_columns(df: pd.DataFrame, league: str = None) -> pd.DataFrame
     if "player_name" not in df.columns:
         raise KeyError("player_name column required for player extraction")
 
-    # Step 1: Fix player_name format (underscore separators)
-    def fix_player_name_format(name):
-        if re.fullmatch(r'.+ - .+_.+', name):
-            return re.sub(r'(.+ - .+?)_(.+)', r'\1 - \2', name)
-        return name
-
-    df['player_name'] = df['player_name'].apply(fix_player_name_format)
-
-    # Step 2: Extract using regex
-    player_regex = re.compile(
-        r'^(.+?)\s*-\s*'
-        r'(.+?)\s*-\s*'
-        r'(.+?)$'
-    )
-
-    player_cols = df['player_name'].str.extract(player_regex)
-    player_cols.columns = ['p_name', 'player_club_', 'player_position']
-
-    # Step 3: Keep only rows with valid extractions
-    valid = player_cols.dropna().copy()
-    df = df.loc[valid.index].reset_index(drop=True)
-    player_cols = player_cols.loc[valid.index].reset_index(drop=True)
-
-    # Step 4: Add back to df
+    # Step 1: Extract player info using unified utils
+    # Note: text_cleaning.extract_player_info handles format fixing internally
+    df, player_cols = text_cleaning.extract_player_info(df, player_name_column='player_name')
+    
+    # Step 2: Add extracted columns back to df
     df = pd.concat([df, player_cols], axis=1)
 
-    # Step 5: Handle missing positions (UPL-specific)
+    # Step 3: Handle missing positions (UPL-specific)
     if league and league.lower() == 'upl':
         missing_positions = {
             'Saidi Mayanja': 'CM',
@@ -420,17 +388,17 @@ def extract_player_columns(df: pd.DataFrame, league: str = None) -> pd.DataFrame
         mask = df['player_position'] == 'None'
         df.loc[mask, 'player_position'] = df.loc[mask, 'p_name'].map(missing_positions).fillna('None')
 
-    # Step 6: Ensure mandatory columns
+    # Step 4: Ensure mandatory columns
     if "club_for" not in df.columns:
         df["club_for"] = df["player_club_"]
 
     if "club_against" not in df.columns:
         df["club_against"] = pd.NA
 
-    # Step 7: Clean extracted text fields BUT PRESERVE split_name standardization
-    df = clean_all_text_columns(df, exclude_cols=['split_name'])
+    # Step 5: Clean extracted text fields BUT PRESERVE split_name standardization
+    df = text_cleaning.apply_text_cleaning_to_columns(df, columns=[c for c in df.columns if c != 'split_name'])
 
-    # Step 8: Normalize positions
+    # Step 6: Normalize positions
     mapping = league_definitions.POSITION_MAPPING
     aliases = league_definitions.POSITION_ALIASES
     df = text_cleaning.normalize_positions(
@@ -585,11 +553,25 @@ def aggregate_halves(df: pd.DataFrame) -> pd.DataFrame:
     """
     Merge first and second half rows into single player-match record.
     
+    This function performs a complex outer join on match session data to combine 
+    half-by-half metrics into a single match-level record per player.
+
+    Workflow:
+    1. Filter the dataset into 1st Half, 2nd Half, and 'All' session types.
+    2. Perform an outer join on core keys (player, matchday, etc.) using constants.get_merge_keys().
+    3. Aggregate metrics by summing (e.g., total distance) or taking the maximum (e.g., top speed).
+    4. Auto-discover and sum remaining numeric columns (e.g., speed zone data) to ensure no data loss.
+    5. Fall back to 'All' session data if half-by-half splits are missing.
+
     **CRITICAL**: 
-    - split_name must be standardized BEFORE this function
-    - Uses constants.AGGREGATE_SUM_METRICS and AGGREGATE_MAX_METRICS
-    - Also aggregates ALL remaining numeric columns (zone columns, etc.)
-      by summing them, so no data is silently lost.
+    - split_name must be standardized BEFORE calling this function.
+    - Uses constants.AGGREGATE_SUM_METRICS and AGGREGATE_MAX_METRICS for explicit rules.
+    
+    Args:
+        df: Dataframe with half-split rows.
+
+    Returns:
+        Dataframe with one row per player-match.
     """
     df = df.copy()
 
@@ -651,14 +633,14 @@ def aggregate_halves(df: pd.DataFrame) -> pd.DataFrame:
         sum_cols = [c for c in constants.AGGREGATE_SUM_METRICS if (c + '_H1') in df_merged.columns or (c + '_H2') in df_merged.columns]
         max_cols = [c for c in constants.AGGREGATE_MAX_METRICS if (c + '_H1') in df_merged.columns or (c + '_H2') in df_merged.columns]
         
-        already_handled = set(merge_keys) | set(sum_cols) | set(max_cols)
 
         for col in sum_cols:
             h1 = f"{col}_H1"
             h2 = f"{col}_H2"
-            df_combined[col] = df_merged.get(h1, 0) if isinstance(df_merged.get(h1), (int, float)) else df_merged[h1].fillna(0) if h1 in df_merged.columns else 0
-            h2_vals = df_merged[h2].fillna(0) if h2 in df_merged.columns else 0
-            h1_vals = df_merged[h1].fillna(0) if h1 in df_merged.columns else 0
+            
+            # Robust numeric conversion before addition
+            h1_vals = pd.to_numeric(df_merged[h1], errors='coerce').fillna(0) if h1 in df_merged.columns else 0
+            h2_vals = pd.to_numeric(df_merged[h2], errors='coerce').fillna(0) if h2 in df_merged.columns else 0
             df_combined[col] = h1_vals + h2_vals
 
         for col in max_cols:
@@ -666,32 +648,31 @@ def aggregate_halves(df: pd.DataFrame) -> pd.DataFrame:
             h2 = f"{col}_H2"
             cols_present = [c for c in [h1, h2] if c in df_merged.columns]
             if cols_present:
+                # Ensure they are numeric before max
+                for c in cols_present:
+                    df_merged[c] = pd.to_numeric(df_merged[c], errors='coerce').fillna(0)
                 df_combined[col] = df_merged[cols_present].max(axis=1)
 
         # --- Auto-discover remaining numeric columns not yet handled ---
         # This catches zone columns (acceleration/deceleration counts, speed zone 
-        # distances, time in zones, etc.) that aren't in the explicit lists.
-        # All remaining numeric columns from H1/H2 are summed by default.
-        all_base_cols_h1 = {c.rsplit('_H1', 1)[0] for c in df_merged.columns if c.endswith('_H1')}
-        all_base_cols_h2 = {c.rsplit('_H2', 1)[0] for c in df_merged.columns if c.endswith('_H2')}
-        remaining_cols = (all_base_cols_h1 | all_base_cols_h2) - already_handled
-        
+        # columns etc.) that might vary by league
+        all_h1_cols = [c for c in df_merged.columns if c.endswith("_H1")]
         extra_sum_count = 0
-        for col in sorted(remaining_cols):
-            h1 = f"{col}_H1"
-            h2 = f"{col}_H2"
-            # Only aggregate numeric columns
-            is_numeric = False
-            if h1 in df_merged.columns and pd.api.types.is_numeric_dtype(df_merged[h1]):
-                is_numeric = True
-            elif h2 in df_merged.columns and pd.api.types.is_numeric_dtype(df_merged[h2]):
-                is_numeric = True
+        for h1_col in all_h1_cols:
+            col_root = h1_col[:-3]
+            if col_root in df_combined.columns:
+                continue # Already handled
             
-            if is_numeric:
-                h1_vals = df_merged[h1].fillna(0) if h1 in df_merged.columns else 0
-                h2_vals = df_merged[h2].fillna(0) if h2 in df_merged.columns else 0
-                df_combined[col] = h1_vals + h2_vals
-                extra_sum_count += 1
+            h2_col = f"{col_root}_H2"
+            if h2_col in df_merged.columns:
+                # Robustly attempt numeric addition
+                try:
+                    h1_vals = pd.to_numeric(df_merged[h1_col], errors='coerce').fillna(0)
+                    h2_vals = pd.to_numeric(df_merged[h2_col], errors='coerce').fillna(0)
+                    df_combined[col_root] = h1_vals + h2_vals
+                    extra_sum_count += 1
+                except Exception as e:
+                    logger.debug(f"Skipping auto-aggregation for non-numeric column '{col_root}': {e}")
         
         if extra_sum_count > 0:
             logger.info(f"Auto-aggregated {extra_sum_count} additional numeric columns (zone data, etc.) by summing halves.")
@@ -752,9 +733,22 @@ def filter_active_sessions(
 
 def compute_derived_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute metrics that are derived from raw data.
+    Compute metrics that are derived from raw data columns.
     
-    **IMPORTANT**: Call AFTER aggregating halves to get correct rates.
+    Includes computation of:
+    - Total accelerations/decelerations (summed from speed zones).
+    - Total actions (accel + decel).
+    - Rate metrics (accel/min, decel/min, distance/min).
+    - Physical Efficiency Score (Total Actions / Distance).
+
+    **IMPORTANT**: Should be called AFTER aggregating halves to ensure rates 
+    are calculated based on total match duration.
+
+    Args:
+        df: Input dataframe with aggregated numeric columns.
+
+    Returns:
+        Dataframe with added derived metric columns.
     """
     df = df.copy()
 
@@ -864,6 +858,9 @@ def clean_pipeline(
 
     # 2. Standardize
     df = standardize_columns(df)
+    
+    # Note: Numeric type coercion now happens defensively inside aggregate_halves
+    # via pd.to_numeric(errors='coerce'), preventing TypeErrors without corrupting text columns.
 
     # 3. Normalize duration
     df = normalize_duration_to_minutes(
@@ -885,7 +882,7 @@ def clean_pipeline(
     df = standardize_split_names(df)
 
     # 6. Now clean all OTHER text columns
-    df = clean_all_text_columns(df, exclude_cols=['split_name'])
+    df = text_cleaning.apply_text_cleaning_to_columns(df, columns=[c for c in df.columns if c != 'split_name'])
 
     # 7. Extract session info
     df = extract_session_info(df)

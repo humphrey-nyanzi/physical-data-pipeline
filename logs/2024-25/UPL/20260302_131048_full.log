@@ -1,0 +1,32 @@
+2026-03-02 13:10:48,527 [INFO] [FULL] Run context initialized.
+2026-03-02 13:10:48,544 [INFO] [FULL] Output directory: Output\2024-25\UPL\Full\20260302_131048
+2026-03-02 13:10:48,564 [INFO] [FULL] Log file: logs\2024-25\UPL\20260302_131048_full.log
+2026-03-02 13:10:48,567 [INFO] [FULL] Starting Full Pipeline for UPL (2024-25)
+2026-03-02 13:10:48,579 [INFO] [FULL] Phase 1: Loading Configuration...
+2026-03-02 13:10:48,601 [INFO] [FULL]   Loaded config for UPL
+2026-03-02 13:10:48,632 [INFO] [FULL] Phase 2: Data Cleaning...
+2026-03-02 13:10:48,635 [INFO] Starting clean_pipeline for UPL
+2026-03-02 13:10:52,301 [INFO] Loaded 50046 rows, 100 columns
+2026-03-02 13:10:58,188 [INFO] Saved 15860 training rows to ./data/processed/UPL_training_data.csv
+2026-03-02 13:10:58,402 [INFO] Filtered out 16231 non-game rows based on 'tags' column.
+2026-03-02 13:10:58,731 [WARNING] DATA EXCLUSION: 11942 rows did not match UPL session pattern. These likely represent non-match sessions and were excluded.
+2026-03-02 13:10:58,899 [WARNING] DATA EXCLUSION: 2386 rows with invalid 'split_name' values. Only '1st Half', '2nd Half', and 'All' are recognized.
+2026-03-02 13:11:29,911 [ERROR] LOGICAL ERROR: Found matchdays ['Md32'] exceeding UPL maximum of 30. These records will be excluded.
+2026-03-02 13:11:30,462 [INFO] Aggregating halves: 0 H1 rows, 0 H2 rows, 0 All rows
+2026-03-02 13:11:30,462 [WARNING] No valid split data found. Returning data as-is.
+2026-03-02 13:11:30,494 [INFO] Pipeline complete. Output: 0 rows, 115 columns
+2026-03-02 13:11:30,511 [INFO] Saved processed data to ./data/processed/UPL25_matches_clean.csv
+2026-03-02 13:11:30,513 [INFO] [FULL]   Cleaning complete. Output: ./data/processed/UPL25_matches_clean.csv
+2026-03-02 13:11:30,514 [INFO] [FULL]   Rows: 0 | Columns: 115
+2026-03-02 13:11:30,523 [INFO] [FULL]   Saved cleaned data to Output\2024-25\UPL\Full\20260302_131048\01_cleaned
+2026-03-02 13:11:30,525 [INFO] [FULL] Phase 3: Analysis...
+2026-03-02 13:11:30,671 [INFO] [FULL]   Computed 6 analysis datasets
+2026-03-02 13:11:30,671 [INFO] [FULL] Phase 4: Reporting...
+2026-03-02 13:11:30,673 [INFO] [FULL]   Generating League-Wide Season Report...
+2026-03-02 13:11:30,723 [INFO] Filtering data for timeframe: season
+2026-03-02 13:11:30,725 [WARNING] [FULL]   Warning: No data found after timeframe filtering.
+2026-03-02 13:11:30,733 [INFO] [FULL]   Generated 0 club reports
+2026-03-02 13:11:30,734 [INFO] [FULL] Full Pipeline Complete!
+2026-03-02 13:11:30,735 [INFO] Full pipeline completed successfully.
+2026-03-02 13:11:30,739 [INFO] [FULL] Metadata saved to Output\2024-25\UPL\Full\20260302_131048\run_metadata.json
+2026-03-02 13:11:30,750 [INFO] [FULL] Run history updated: logs\run_history.csv

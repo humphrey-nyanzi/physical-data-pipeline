@@ -1,0 +1,20 @@
+2026-03-02 12:59:07,994 [INFO] [FULL] Run context initialized.
+2026-03-02 12:59:07,997 [INFO] [FULL] Output directory: Output\2024-25\UPL\Full\20260302_125907
+2026-03-02 12:59:07,998 [INFO] [FULL] Log file: logs\2024-25\UPL\20260302_125907_full.log
+2026-03-02 12:59:07,999 [INFO] [FULL] Starting Full Pipeline for UPL (2024-25)
+2026-03-02 12:59:08,000 [INFO] [FULL] Phase 1: Loading Configuration...
+2026-03-02 12:59:08,001 [INFO] [FULL]   Loaded config for UPL
+2026-03-02 12:59:08,003 [INFO] [FULL] Phase 2: Data Cleaning...
+2026-03-02 12:59:08,004 [INFO] Starting clean_pipeline for UPL
+2026-03-02 12:59:12,039 [INFO] Loaded 50046 rows, 100 columns
+2026-03-02 12:59:16,618 [INFO] Saved 15860 training rows to ./data/processed/UPL_training_data.csv
+2026-03-02 12:59:16,770 [INFO] Filtered out 16231 non-game rows based on 'tags' column.
+2026-03-02 12:59:17,006 [WARNING] DATA EXCLUSION: 11942 rows did not match UPL session pattern. These likely represent non-match sessions and were excluded.
+2026-03-02 12:59:17,164 [WARNING] DATA EXCLUSION: 2386 rows with invalid 'split_name' values. Only '1st Half', '2nd Half', and 'All' are recognized.
+2026-03-02 12:59:35,271 [ERROR] LOGICAL ERROR: Found matchdays ['Md32'] exceeding UPL maximum of 30. These records will be excluded.
+2026-03-02 12:59:58,447 [INFO] Aggregating halves: 6048 H1 rows, 6052 H2 rows, 6115 All rows
+2026-03-02 13:00:01,174 [ERROR] [FULL] Cleaning failed: unsupported operand type(s) for +: 'int' and 'str'
+2026-03-02 13:00:01,263 [ERROR] [FULL] Pipeline failed: unsupported operand type(s) for +: 'int' and 'str'
+2026-03-02 13:00:01,870 [ERROR] Full pipeline failed.
+2026-03-02 13:00:01,931 [INFO] [FULL] Metadata saved to Output\2024-25\UPL\Full\20260302_125907\run_metadata.json
+2026-03-02 13:00:01,971 [INFO] [FULL] Run history updated: logs\run_history.csv

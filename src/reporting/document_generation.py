@@ -129,7 +129,12 @@ def add_dataframe_as_table(
         style: Table style name
         caption: Optional caption to display below the table
     """
-    table = doc.add_table(rows=1, cols=len(df.columns))
+    # Pre-allocate the entire table (header + data rows)
+    # docx is much faster when rows are allocated at once rather than using add_row()
+    num_rows = len(df) + 1
+    num_cols = len(df.columns)
+    table = doc.add_table(rows=num_rows, cols=num_cols)
+    
     try:
         table.style = style
     except Exception:
@@ -155,16 +160,16 @@ def add_dataframe_as_table(
             for run in paragraph.runs:
                 run.bold = True
 
-    # Add data rows
-    for idx, row in df.iterrows():
-        row_cells = table.add_row().cells
-        for i, val in enumerate(row):
+    # Add data rows using pre-allocated table.rows
+    for r_idx, (idx, row) in enumerate(df.iterrows(), start=1):
+        row_cells = table.rows[r_idx].cells
+        for c_idx, val in enumerate(row):
             text = fmt_cell_value(val)
-            row_cells[i].text = text
+            row_cells[c_idx].text = text
             
             # Remove spacing and align
-            col_name = str(df.columns[i]).lower()
-            for paragraph in row_cells[i].paragraphs:
+            col_name = str(df.columns[c_idx]).lower()
+            for paragraph in row_cells[c_idx].paragraphs:
                 paragraph.paragraph_format.space_before = Pt(0)
                 paragraph.paragraph_format.space_after = Pt(0)
                 if col_name in ['s/n', 'rank', 's/no', 'match day', 'value'] or 'count' in col_name:

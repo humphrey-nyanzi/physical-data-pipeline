@@ -20,12 +20,6 @@ import pandas as pd
 from src.pipelines.base import AnalysisPipeline
 from src.data import cleaning
 from src.analysis import analysis
-from src.analysis.visualizations import (
-    plot_club_metrics_trend,
-)
-from src.reporting import (
-    save_document,
-)
 from src.reporting.club_report_builder import ClubReportBuilder
 from src.reporting.season_report_builder import SeasonReportBuilder
 from src.analysis import season_analysis
@@ -108,10 +102,8 @@ class FullPipeline(AnalysisPipeline):
 
     def run(self) -> bool:
         """Execute full 4-phase pipeline."""
-        self.setup_output_dir()
-        
         league = self.args.league.lower()
-        season = self.args.season
+        season = self.args.season.replace("/", "-")
         include_gk = self.args.include_gk
         
         self.log(f"Starting Full Pipeline for {league.upper()} ({season})")
@@ -123,15 +115,19 @@ class FullPipeline(AnalysisPipeline):
             
             # ===== PHASE 2: Data Cleaning =====
             self.log("Phase 2: Data Cleaning...")
-            cleaned_df, clean_output_path = self._phase_2_cleaning(
-                str(self.args.input), league, season
+            cleaned_df, _ = self._phase_2_cleaning(
+                str(self.args.input), league, self.args.season
             )
             self.log(f"  Rows: {len(cleaned_df)} | Columns: {len(cleaned_df.columns)}")
+            
+            # Update metrics for metadata
+            self.update_metrics({"total_rows": len(cleaned_df)})
             
             # Save cleaned data for reference
             clean_dir = self.output_dir / "01_cleaned"
             clean_dir.mkdir(parents=True, exist_ok=True)
-            cleaned_df.to_csv(clean_dir / f"{league}_cleaned.csv", index=False)
+            clean_filename = f"{league.upper()}_{season}_Full_Cleaned_{self.run_id}.csv"
+            cleaned_df.to_csv(clean_dir / clean_filename, index=False)
             self.log(f"  Saved cleaned data to {clean_dir}")
             
             # ===== PHASE 3: Analysis =====
@@ -341,7 +337,7 @@ class FullPipeline(AnalysisPipeline):
 
             builder = SeasonReportBuilder(
                 filtered_df, league, timeframe, report_dir, half_season_limit,
-                season=self.args.season, gk_mode=self.args.gk
+                season=self.args.season, gk_mode=self.args.gk, run_id=self.run_id
             )
             builder.build_report()
             return True

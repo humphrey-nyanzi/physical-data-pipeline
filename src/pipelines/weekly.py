@@ -65,7 +65,6 @@ class WeeklyPipeline(AnalysisPipeline):
 
     def run(self) -> bool:
         """Execute the weekly report generation pipeline."""
-        self.setup_output_dir()
         matchday_number = self.args.md
         
         self.log(f"Starting Weekly Report for MD{matchday_number}")
@@ -97,6 +96,7 @@ class WeeklyPipeline(AnalysisPipeline):
         df_all = compute_derived_metrics(df_all)
         
         self.log(f"TOTAL PLAYERS: {len(df_all)}")
+        self.update_metrics({"total_players_raw": len(df_all)})
         
         # 3. Apply Strict Filtering (60 min, 2 km)
         initial_count = len(df_all)
@@ -107,14 +107,22 @@ class WeeklyPipeline(AnalysisPipeline):
         
         filtered_count = len(df_all)
         self.log(f"Filtered players: {filtered_count} retained (from {initial_count} initial)")
+        self.update_metrics({
+            "players_retained": filtered_count,
+            "players_filtered_out": initial_count - filtered_count,
+            "uploading_teams": list(uploading_teams),
+            "missing_teams": list(missing_teams)
+        })
 
         # 4. Generate Reports
-        filename_season = self.args.season.replace("/", "-")
+        season_str = self.args.season.replace("/", "-")
         league_prefix = self.args.league.upper()
         
         # Pass 1: Main Report (Excluding GKs)
         df_field = filter_by_position(df_all, "field")
-        main_output_path = self.output_dir / f"{league_prefix} {filename_season} MD{matchday_number} Catapult Data Report.docx"
+        # Standardized naming: {League}_{Season}_{Scope}_{Summary}_{Run_ID}.docx
+        main_filename = f"{league_prefix}_{season_str}_Weekly_MD{matchday_number}_Report_{self.run_id}.docx"
+        main_output_path = self.output_dir / main_filename
         
         try:
             builder = WeeklyGPSReportBuilder(matchday_number, season=self.args.season, league=self.args.league)
@@ -129,11 +137,10 @@ class WeeklyPipeline(AnalysisPipeline):
         if self.args.gk:
             df_gk = filter_by_position(df_all, "gk")
             if not df_gk.empty:
-                gk_output_path = self.output_dir / f"{league_prefix} {filename_season} MD{matchday_number} Goalkeeper Data Report.docx"
+                gk_filename = f"{league_prefix}_{season_str}_Weekly_GK_MD{matchday_number}_Report_{self.run_id}.docx"
+                gk_output_path = self.output_dir / gk_filename
                 try:
-                    # We can use the same builder or a slightly modified one for GK
                     gk_builder = WeeklyGPSReportBuilder(matchday_number, season=self.args.season, gk_mode=True, league=self.args.league)
-                    # We might want to customize build_report for GK later, but for now just pass filtered data
                     gk_builder.build_report(df_gk, uploading_teams, missing_teams)
                     gk_builder.save(str(gk_output_path))
                     self.log(f"GK Report Saved: {gk_output_path}")
