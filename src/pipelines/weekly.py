@@ -9,7 +9,8 @@ from src.utils.text_parsing import parse_matchday, parse_session_info
 from src.processing.gps_aggregation import aggregate_halves, extract_metrics, compute_derived_metrics
 from src.reporting.weekly_gps_report import WeeklyGPSReportBuilder
 from src.config import constants, league_definitions
-from src.data.cleaning import filter_by_position
+from src.data.cleaning import filter_by_position, RejectionLog
+from src.utils.console import Console
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class WeeklyPipeline(AnalysisPipeline):
 
         if not self.input_dir.exists():
             self.log(f"Input directory not found: {self.input_dir}", logging.ERROR)
+            Console.error(f"Input directory not found: {self.input_dir}")
             return False
             
         # Validate matchday logic
@@ -52,13 +54,13 @@ class WeeklyPipeline(AnalysisPipeline):
             config = get_league_config(self.args.league)
             max_md = config.get("max_matchdays", 30)
             if self.args.md > max_md:
-                self.log(
-                    f"LOGICAL ERROR: Matchday {self.args.md} exceeds league maximum of {max_md} for {self.args.league.upper()}.",
-                    logging.ERROR
-                )
+                err = f"Matchday {self.args.md} exceeds league maximum of {max_md} for {self.args.league.upper()}."
+                self.log(f"LOGICAL ERROR: {err}", logging.ERROR)
+                Console.error(err)
                 return False
         except Exception as e:
             self.log(f"League configuration error: {e}", logging.ERROR)
+            Console.error(f"League configuration error: {e}")
             return False
 
         return True
@@ -66,27 +68,40 @@ class WeeklyPipeline(AnalysisPipeline):
     def run(self) -> bool:
         """Execute the weekly report generation pipeline."""
         matchday_number = self.args.md
+        league = self.args.league.lower()
+        season_str = self.args.season.replace("/", "-")
+        league_prefix = league.upper()
         
+        Console.section(f"Weekly Report  ·  {league.upper()}  ·  MD{matchday_number}")
         self.log(f"Starting Weekly Report for MD{matchday_number}")
         
+        # Initialize Rejection Log
+        rejection_dir = str(Path("logs") / season_str / league.upper() / "rejected" / self.run_id)
+        rlog = RejectionLog(run_id=self.run_id, output_dir=rejection_dir)
+
         # 1. Find and Filter Files
         csv_files = self._find_csv_files()
         
         if not csv_files:
+            Console.warning("No new CSV files found to process.")
             self.log("No new CSV files found to process.", logging.WARNING)
             return False
 
         # 2. Process Files
-        processed_data = self._process_files(csv_files, matchday_number)
+        processed_data = self._process_files(csv_files, matchday_number, rlog)
         
         if not processed_data:
+            Console.warning("No valid data extracted for this matchday.")
             self.log("No valid data extracted for this matchday.", logging.WARNING)
+            rlog.flush()
             return False
             
         df_all_list, uploading_teams, missing_teams, files_to_rename = processed_data
         
         if not df_all_list:
+             Console.warning("No data found for the target teams.")
              self.log("No DataFrames generated.", logging.WARNING)
+             rlog.flush()
              return False
              
         # Combined DataFrame
@@ -95,18 +110,25 @@ class WeeklyPipeline(AnalysisPipeline):
         # Compute derived metrics (acc/dec totals and rates)
         df_all = compute_derived_metrics(df_all)
         
-        self.log(f"TOTAL PLAYERS: {len(df_all)}")
+        Console.info(f"Loaded {len(df_all):,} player sessions from {len(csv_files)} files")
         self.update_metrics({"total_players_raw": len(df_all)})
         
         # 3. Apply Strict Filtering (60 min, 2 km)
+        Console.section("Phase 2 · Activity Filtering")
         initial_count = len(df_all)
-        df_all = df_all[
-            (df_all['Duration'] >= constants.MIN_SESSION_DURATION_MINUTES) &
-            (df_all['Distance (km)'] >= constants.MIN_SESSION_DISTANCE_KM)
-        ].copy()
+        
+        # Track rejected rows for the audit
+        fail_mask = (df_all['Duration'] < constants.MIN_SESSION_DURATION_MINUTES) | \
+                    (df_all['Distance (km)'] < constants.MIN_SESSION_DISTANCE_KM)
+        
+        if fail_mask.any():
+            rlog.record(df_all[fail_mask], "activity_filter", f"Distance < {constants.MIN_SESSION_DISTANCE_KM}km OR Duration < {constants.MIN_SESSION_DURATION_MINUTES}min")
+
+        df_all = df_all[~fail_mask].copy()
         
         filtered_count = len(df_all)
-        self.log(f"Filtered players: {filtered_count} retained (from {initial_count} initial)")
+        Console.stat("Players retained", filtered_count, initial_count)
+        
         self.update_metrics({
             "players_retained": filtered_count,
             "players_filtered_out": initial_count - filtered_count,
@@ -115,12 +137,12 @@ class WeeklyPipeline(AnalysisPipeline):
         })
 
         # 4. Generate Reports
-        season_str = self.args.season.replace("/", "-")
-        league_prefix = self.args.league.upper()
+        Console.section("Phase 3 · Generating Reports")
         
         # Pass 1: Main Report (Excluding GKs)
         df_field = filter_by_position(df_all, "field")
-        # Standardized naming: {League}_{Season}_{Scope}_{Summary}_{Run_ID}.docx
+        Console.info(f"Generating Main Weekly Report (MD{matchday_number}) ...")
+        
         main_filename = f"{league_prefix}_{season_str}_Weekly_MD{matchday_number}_Report_{self.run_id}.docx"
         main_output_path = self.output_dir / main_filename
         
@@ -128,30 +150,41 @@ class WeeklyPipeline(AnalysisPipeline):
             builder = WeeklyGPSReportBuilder(matchday_number, season=self.args.season, league=self.args.league)
             builder.build_report(df_field, uploading_teams, missing_teams)
             builder.save(str(main_output_path))
+            Console.saved("Main Report", str(main_output_path))
             self.log(f"Main Report Saved: {main_output_path}")
         except Exception as e:
+            Console.error(f"Failed to generate main report: {e}")
             self.log(f"Failed to generate main report: {e}", logging.ERROR)
+            rlog.flush()
             return False
 
         # Pass 2: GK Report (If requested)
         if self.args.gk:
             df_gk = filter_by_position(df_all, "gk")
             if not df_gk.empty:
+                Console.info("Generating Goalkeeper Weekly Report ...")
                 gk_filename = f"{league_prefix}_{season_str}_Weekly_GK_MD{matchday_number}_Report_{self.run_id}.docx"
                 gk_output_path = self.output_dir / gk_filename
                 try:
                     gk_builder = WeeklyGPSReportBuilder(matchday_number, season=self.args.season, gk_mode=True, league=self.args.league)
                     gk_builder.build_report(df_gk, uploading_teams, missing_teams)
                     gk_builder.save(str(gk_output_path))
+                    Console.saved("GK Report", str(gk_output_path))
                     self.log(f"GK Report Saved: {gk_output_path}")
                 except Exception as e:
+                    Console.error(f"Failed to generate GK report: {e}")
                     self.log(f"Failed to generate GK report: {e}", logging.ERROR)
             else:
+                Console.info("No goalkeeper data available (skipping GK report).")
                 self.log("No goalkeeper data available to generate report.", logging.INFO)
             
-        # 5. Cleanup (Rename processed files)
+        Console.section_end()
+
+        # 5. Cleanup & Audit
         self._rename_files(files_to_rename)
+        rlog.flush()
         
+        Console.success("Weekly Pipeline Complete!")
         return True
 
     def _find_csv_files(self) -> List[Path]:
@@ -162,7 +195,7 @@ class WeeklyPipeline(AnalysisPipeline):
         self.log(f"Found {len(csv_files)} new CSV files.")
         return csv_files
 
-    def _process_files(self, csv_files: List[Path], target_md: int) -> Tuple:
+    def _process_files(self, csv_files: List[Path], target_md: int, rlog: RejectionLog = None) -> Tuple:
         """Process list of CSV files."""
         processed_dfs = []
         files_to_rename = []
@@ -175,6 +208,8 @@ class WeeklyPipeline(AnalysisPipeline):
                 df_raw = pd.read_csv(csv_file)
                 if 'Session Title' not in df_raw.columns:
                     self.log(f"Skipping {csv_file.name}: 'Session Title' col missing", logging.WARNING)
+                    if rlog is not None:
+                        rlog.record(df_raw, "file_check", f"'Session Title' missing in {csv_file.name}")
                     continue
                 
                 # Track if we extracted any valid data from this file
@@ -186,75 +221,76 @@ class WeeklyPipeline(AnalysisPipeline):
                     # 1. Check Matchday
                     md_num = parse_matchday(session_title)
                     if md_num != target_md:
+                        if rlog is not None:
+                            rlog.record(df_session, "matchday_filter", f"MD{md_num} != Target MD{target_md}")
                         continue
                         
                     # 2. Parse Info
                     session_info = parse_session_info(session_title)
                     if not session_info:
                         self.log(f"Skipping session '{session_title}' in {csv_file.name}: Invalid format", logging.WARNING)
+                        if rlog is not None:
+                            rlog.record(df_session, "parse_error", "Invalid Session Title format")
                         continue
                         
                     # 3. Extract & Clean
                     # Pass the session subset to extract metrics
-                    df_clean = extract_metrics(df_session, csv_file.name, log_func=lambda m: None)
+                    df_clean = extract_metrics(df_session, csv_file.name, log_func=lambda m, *a: None)
                     if df_clean.empty:
+                        if rlog is not None:
+                            rlog.record(df_session, "extract_metrics", "Requirement check failed (missing cols or names)")
                         continue
                         
                     # 4. Aggregate Halves
-                    df_agg = aggregate_halves(df_clean, log_func=lambda m: None)
+                    df_agg = aggregate_halves(df_clean, log_func=lambda m, *a: None)
                     
                     if not df_agg.empty:
                         # Standardize Team Names using fuzzy matching
-                        # We use the OFFICIAL roster for this season to find the best match
                         official_clubs = [c for c in league_definitions.get_league_clubs(self.args.league, self.args.season)]
                         from src.utils.text_cleaning import best_match
 
                         raw_t1 = session_info.get('team1', '').strip()
                         raw_t2 = session_info.get('team2', '').strip()
                         
-                        # Apply fuzzy matching
-                        # Return None if no good match found (e.g. "Juventus")
                         t1_clean = best_match(raw_t1, official_clubs, return_original=False) if raw_t1 else None
                         t2_clean = best_match(raw_t2, official_clubs, return_original=False) if raw_t2 else None
 
                         # CRITICAL: If uploading team (Team 1) is invalid, discard data
                         if raw_t1 and t1_clean is None:
-                            self.log(f"Discrepancy: Team '{raw_t1}' not found in official list. Skipping session '{session_title}'.", logging.WARNING)
+                            msg = f"Team '{raw_t1}' not found in official list. Skipping session."
+                            self.log(f"Discrepancy: {msg}", logging.WARNING)
+                            if rlog is not None:
+                                rlog.record(df_agg, "club_normalization", f"Unrecognized team: {raw_t1}")
                             continue
 
                         # Update session info with clean names
                         if t1_clean:
                             session_info['team1'] = t1_clean
-                        
                         if t2_clean:
                             session_info['team2'] = t2_clean
                         elif raw_t2:
-                            # Log warning for opponent but keep raw name (don't discard session)
                             self.log(f"Discrepancy: Opponent '{raw_t2}' not found in official list.", logging.WARNING)
 
-                        # Add metadata (Team, Matchday, etc.)
+                        # Add metadata
                         for key, val in session_info.items():
                             df_agg[key] = val
                         
                         processed_dfs.append(df_agg)
                         file_has_valid_data = True
                         
-                        # Track Teams (using the cleaned names)
                         if t1_clean:
                             uploading_teams.add(t1_clean.upper())
                         if t2_clean:
                             opponents.add(t2_clean.upper())
                         
-                        # Note: Validation against official_clubs is now implicit due to best_match logic
-                        
-                        self.log(f"Processed Session '{session_title}': {len(df_agg)} players")
+                        Console.info(f"Processed '{session_title}': {len(df_agg)} players")
                 
-                # Only rename if we successfully processed at least one session
                 if file_has_valid_data:
                     files_to_rename.append(csv_file)
 
             except Exception as e:
                 self.log(f"Error processing {csv_file.name}: {e}", logging.ERROR)
+                Console.error(f"Error processing {csv_file.name}: {e}")
 
         
         # Determine missing teams based on FULL league roster

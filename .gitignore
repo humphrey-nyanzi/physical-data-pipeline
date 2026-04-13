@@ -47,12 +47,13 @@ data/raw/*.csv
 data/processed/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+data/training
 
 # Reports & Outputs
 reports/**/*.docx
 reports/**/*.xlsx
 Output/
-logs/*.log
+logs/
 outputs_archive/
 
 # Testing

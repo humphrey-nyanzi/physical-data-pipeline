@@ -12,6 +12,7 @@ from src.analysis import season_analysis
 from src.reporting.season_report_builder import SeasonReportBuilder
 from src.data.cleaning import filter_by_position
 from src.config import league_definitions
+from src.utils.console import Console
 
 # Imports for Per-Club Reporting (legacy orchestrator logic)
 from src.reporting import (
@@ -79,79 +80,99 @@ class SeasonPipeline(AnalysisPipeline):
         raw_path = self.args.input
         timeframe = self.args.timeframe
         season_str = self.args.season.replace("/", "-")
-        
+
+        Console.section(f"Season Analysis  ·  {league.upper()}  ·  {self.args.season}")
         self.log(f"Starting Season Analysis for {league.upper()} ({self.args.season})")
-        
+
         # --- Phase 1 & 2: Cleaning ---
         if not self.args.skip_cleaning:
-            self.log("Phase 1: Data Cleaning...")
+            Console.section("Phase 1 · Data Cleaning")
             try:
-                # We reuse the cleaning pipeline from src.data
+                # Build rejection audit directory inside this run's log path
+                rejection_dir = str(
+                    Path("logs") / season_str / league.upper() / "rejected" / self.run_id
+                )
+
                 cleaned_df, clean_output_path = cleaning.clean_pipeline(
-                    raw_path=str(raw_path), 
+                    raw_path=str(raw_path),
                     league=league,
                     season=self.args.season,
-                    include_gk=self.args.gk
+                    include_gk=self.args.gk,
+                    run_id=self.run_id,
+                    rejection_log_dir=rejection_dir,
                 )
-                self.log(f"Cleaning complete. Rows: {len(cleaned_df)}")
+                Console.success(f"Cleaning complete — {len(cleaned_df):,} rows retained")
+                Console.saved("Cleaned CSV", str(clean_output_path))
+                Console.stat("Rows retained", len(cleaned_df))
                 self.update_metrics({"total_rows_cleaned": len(cleaned_df)})
-                
-                # Save cleaned data to output dir for reference
+
+                # Save cleaned data to run output dir for reference
                 clean_dir = self.output_dir / "01_cleaned"
                 clean_dir.mkdir(parents=True, exist_ok=True)
                 clean_filename = f"{league.upper()}_{season_str}_Season_Cleaned_{self.run_id}.csv"
                 clean_save_path = clean_dir / clean_filename
                 cleaned_df.to_csv(clean_save_path, index=False)
-                self.log(f"Saved cleaned data to {clean_save_path}")
-                
+                Console.saved("Run copy (cleaned)", str(clean_save_path))
+                Console.section_end()
+
             except Exception as e:
                 self.log(f"Cleaning failed: {e}", logging.ERROR)
+                Console.error(f"Cleaning failed: {e}")
+                Console.section_end()
                 return False
         else:
-            self.log("Skipping Phase 1: Data Cleaning (using pre-processed data).")
+            Console.section("Phase 1 · Skipped (pre-processed input)")
             try:
                 cleaned_df = pd.read_csv(raw_path)
-                self.log(f"Loaded pre-processed data. Rows: {len(cleaned_df)}")
+                Console.info(f"Loaded pre-processed data — {len(cleaned_df):,} rows")
                 self.update_metrics({"total_rows_loaded": len(cleaned_df)})
-                # Safety validation for pre-processed data
                 cleaned_df = cleaning.validate_matchday_logic(cleaned_df, league)
+                Console.section_end()
             except Exception as e:
                 self.log(f"Failed to load input file: {e}", logging.ERROR)
+                Console.error(f"Failed to load input file: {e}")
+                Console.section_end()
                 return False
 
         # --- Phase 2: Filtering ---
-        # Define field positions (all except goalkeeper)
+        Console.section("Phase 2 · Position Filtering")
         field_positions = ["defender", "midfielder", "forward"]
         df_field = filter_by_position(cleaned_df, field_positions)
-        
-        # Define GK positions
+        Console.stat("Field players (excl. GK)", len(df_field), len(cleaned_df))
+
         df_gk = filter_by_position(cleaned_df, ["goalkeeper"]) if self.args.gk else pd.DataFrame()
+        if self.args.gk:
+            Console.stat("Goalkeepers", len(df_gk), len(cleaned_df))
+        Console.section_end()
 
         # --- Phase 3: Reporting ---
-        self.log("Phase 3: Generating Reports...")
-        
+        Console.section("Phase 3 · Generating Reports")
+
         # 1. League-Wide Report
-        self.log(f"Generating League-Wide {timeframe.title()} Report...")
+        Console.info(f"Generating League-Wide {timeframe.title()} Report ...")
         if not self._generate_league_report(df_field, league, timeframe, suffix=""):
+            Console.warning("League report failed.")
             self.log("League report failed.", logging.ERROR)
-        
+
         if self.args.gk and not df_gk.empty:
-            self.log("Generating Goalkeeper League Report...")
+            Console.info("Generating Goalkeeper League Report ...")
             self._generate_league_report(df_gk, league, timeframe, suffix="_GK")
 
         # 2. Individual Club Reports
         if not self.args.skip_club_reports:
-            self.log("Phase 4: Generating Per-Club Reports...")
+            Console.info("Phase 4 · Generating Per-Club Reports ...")
             if not self._generate_club_reports(df_field, league, suffix=""):
+                Console.warning("Club reporting encountered errors.")
                 self.log("Club reporting encountered errors.", logging.WARNING)
-            
+
             if self.args.gk and not df_gk.empty:
-                self.log("Generating Goalkeeper Club Reports...")
+                Console.info("Generating Goalkeeper Club Reports ...")
                 self._generate_club_reports(df_gk, league, suffix="_GK")
         else:
-             self.log("Skipping Per-Club Reports.")
+            Console.info("Skipping Per-Club Reports (--skip-club-reports).")
 
-        self.log("Season Pipeline Complete!")
+        Console.section_end()
+        Console.success("Season Pipeline Complete!")
         return True
 
     def _generate_club_reports(self, df: pd.DataFrame, league: str, suffix: str = "") -> bool:

@@ -2,8 +2,10 @@
 Utilities package for FUFA Match Analysis.
 
 Consolidates reusable functions for text processing, normalization,
-styling, and document formatting.
+styling, document formatting, and console output.
 """
+
+from .console import Console, PipelineFormatter, setup_console_logging
 
 from .text_cleaning import (
     clean_text,
@@ -31,6 +33,10 @@ from .styling import (
 )
 
 __all__ = [
+    # Console output
+    "Console",
+    "PipelineFormatter",
+    "setup_console_logging",
     # Text cleaning functions
     "clean_text",
     "normalize_name",

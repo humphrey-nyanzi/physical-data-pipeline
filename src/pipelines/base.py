@@ -6,6 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
+try:
+    from src.utils.console import Console
+except ImportError:
+    Console = None  # Graceful fallback
+
 logger = logging.getLogger(__name__)
 
 class AnalysisPipeline(ABC):
@@ -98,6 +103,12 @@ class AnalysisPipeline(ABC):
         self.log("Run context initialized.")
         self.log(f"Output directory: {self.output_dir}")
         self.log(f"Log file: {log_file}")
+        if Console:
+            Console.divider()
+            Console.stat("Run ID",        self.run_id)
+            Console.stat("Output dir",    str(self.output_dir))
+            Console.stat("Log file",       str(log_file))
+            Console.divider()
 
     def save_metadata(self, status: str = "completed"):
         """Save run metadata to JSON file and update global history."""
@@ -107,7 +118,6 @@ class AnalysisPipeline(ABC):
         # Save local metadata JSON
         metadata_file = self.output_dir / "run_metadata.json"
         try:
-            # Helper to convert nested Path objects to strings for JSON
             def stringify_paths(obj):
                 if isinstance(obj, dict):
                     return {k: stringify_paths(v) for k, v in obj.items()}
@@ -122,12 +132,15 @@ class AnalysisPipeline(ABC):
             with open(metadata_file, 'w') as f:
                 json.dump(serializable_metadata, f, indent=4)
             self.log(f"Metadata saved to {metadata_file}")
+            if Console:
+                Console.saved("Run metadata", str(metadata_file))
             
-            # Update global run history CSV
             self._update_run_history_csv()
             
         except Exception as e:
             self.log(f"Failed to save metadata: {e}", logging.ERROR)
+            if Console:
+                Console.error(f"Failed to save metadata: {e}")
 
     def _update_run_history_csv(self):
         """Append this run to the global run_history.csv file."""

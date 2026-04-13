@@ -50,6 +50,7 @@ VOLUME_METRICS = [
 
 INTENSITY_METRICS = [
     "player_load",
+    "top_speed_ms",
     "top_speed_kmh",
     "distance_per_min_mmin",
     "power_score_wkg",
@@ -137,6 +138,7 @@ AGGREGATE_SUM_METRICS = [
     for col in CORE_METRICS
     if col
     not in [
+        "top_speed_ms",
         "top_speed_kmh",
         "distance_per_min_mmin",
         "max_acceleration_mss",
@@ -148,6 +150,7 @@ AGGREGATE_SUM_METRICS = [
 
 # Metrics to aggregate via MAX when merging halves
 AGGREGATE_MAX_METRICS = [
+    "top_speed_ms",
     "top_speed_kmh",
     "max_acceleration_mss",
     "max_deceleration_mss",

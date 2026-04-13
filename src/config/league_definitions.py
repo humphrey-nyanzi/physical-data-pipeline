@@ -32,7 +32,7 @@ FWSL_CLUBS_BY_SEASON = {
 # Legacy fallback
 FWSL_CLUBS = FWSL_CLUBS_BY_SEASON["2025/2026"]
 
-FWSL_SESSION_PATTERN = r"^Wmd\d+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+$"
+FWSL_SESSION_PATTERN = r"^W?md\s*\d+\s*-.*"
 """
 Expected FWSL session title format: 'Wmd{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
 Example: 'Wmd1-Kampala Queens Fc-Olila HS WFC-Home-League-Win'
@@ -80,7 +80,7 @@ UPL_CLUBS_BY_SEASON = {
 # Legacy fallback
 UPL_CLUBS = UPL_CLUBS_BY_SEASON["2025/2026"]
 
-UPL_SESSION_PATTERN = r"^Md\d+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+-[\w\s\.]+$"
+UPL_SESSION_PATTERN = r"^Md\s*\d+\s*-.*"
 """
 Expected UPL session title format: 'Md{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
 Example: 'Md1-Kcca Fc-Ura Fc-Home-League-Win'

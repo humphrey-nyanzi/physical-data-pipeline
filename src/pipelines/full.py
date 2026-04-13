@@ -24,6 +24,7 @@ from src.reporting.club_report_builder import ClubReportBuilder
 from src.reporting.season_report_builder import SeasonReportBuilder
 from src.analysis import season_analysis
 from src.config import league_definitions
+from src.utils.console import Console
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -108,49 +109,69 @@ class FullPipeline(AnalysisPipeline):
         
         self.log(f"Starting Full Pipeline for {league.upper()} ({season})")
         
+    def run(self) -> bool:
+        """Execute full 4-phase pipeline."""
+        league = self.args.league.lower()
+        season = self.args.season.replace("/", "-")
+        include_gk = self.args.include_gk
+        
+        Console.section(f"Full Analysis  ·  {league.upper()}  ·  {self.args.season}")
+        self.log(f"Starting Full Pipeline for {league.upper()} ({season})")
+        
         try:
+            # Build rejection audit directory
+            rejection_dir = str(Path("logs") / season / league.upper() / "rejected" / self.run_id)
+
             # ===== PHASE 1: Configuration =====
+            Console.section("Phase 1 · Loading Configuration")
             self.log("Phase 1: Loading Configuration...")
             self._phase_1_config(league)
+            Console.section_end()
             
             # ===== PHASE 2: Data Cleaning =====
+            Console.section("Phase 2 · Data Cleaning & Audit")
             self.log("Phase 2: Data Cleaning...")
             cleaned_df, _ = self._phase_2_cleaning(
-                str(self.args.input), league, self.args.season
+                str(self.args.input), league, self.args.season, rejection_dir
             )
-            self.log(f"  Rows: {len(cleaned_df)} | Columns: {len(cleaned_df.columns)}")
-            
-            # Update metrics for metadata
-            self.update_metrics({"total_rows": len(cleaned_df)})
+            Console.stat("Rows retained", len(cleaned_df))
+            self.update_metrics({"total_rows_cleaned": len(cleaned_df)})
             
             # Save cleaned data for reference
             clean_dir = self.output_dir / "01_cleaned"
             clean_dir.mkdir(parents=True, exist_ok=True)
             clean_filename = f"{league.upper()}_{season}_Full_Cleaned_{self.run_id}.csv"
-            cleaned_df.to_csv(clean_dir / clean_filename, index=False)
-            self.log(f"  Saved cleaned data to {clean_dir}")
+            clean_path = clean_dir / clean_filename
+            cleaned_df.to_csv(clean_path, index=False)
+            Console.saved("Run copy (cleaned)", str(clean_path))
+            Console.section_end()
             
             # ===== PHASE 3: Analysis =====
+            Console.section("Phase 3 · Processing Metrics")
             self.log("Phase 3: Analysis...")
             analysis_results = self._phase_3_analysis(cleaned_df)
-            self.log(f"  Computed {len(analysis_results)} analysis datasets")
+            Console.stat("Analysis datasets", len(analysis_results))
+            Console.section_end()
             
             # ===== PHASE 4: Reporting =====
+            Console.section("Phase 4 · Generating Reports")
             self.log("Phase 4: Reporting...")
             
             # 1. League-Wide Report (Season/Half-Season)
+            Console.info(f"Generating League-Wide {self.args.timeframe.title()} Report...")
             self._phase_4_league_reporting(cleaned_df, league)
             
             # 2. Individual Club Reports
             if not self.args.skip_club_reports:
+                Console.info("Generating Individual Club Documents...")
                 report_count = self._phase_4_club_reporting(
                     cleaned_df, league, season, include_gk or self.args.gk, analysis_results
                 )
-                self.log(f"  Generated {report_count} club reports")
+                Console.stat("Club reports generated", report_count)
             else:
-                self.log("  Club reports skipped (--skip-club-reports)")
+                Console.info("Club reports skipped (--skip-club-reports)")
             
-            self.log("Full Pipeline Complete!")
+            Console.section_end()
             return True
             
         except Exception as e:
@@ -187,26 +208,17 @@ class FullPipeline(AnalysisPipeline):
     # =========================================================================
     
     def _phase_2_cleaning(
-        self, raw_path: str, league: str, season: str
+        self, raw_path: str, league: str, season: str, rejection_dir: str = ""
     ) -> Tuple[pd.DataFrame, str]:
-        """
-        Execute data cleaning pipeline.
-        
-        Args:
-            raw_path: Path to raw CSV file
-            league: League identifier
-            season: Season string
-            
-        Returns:
-            Tuple of (cleaned_dataframe, output_path)
-        """
+        """Execute data cleaning pipeline."""
         try:
             cleaned_df, output_path = cleaning.clean_pipeline(
                 raw_path=raw_path,
                 league=league,
-                season=season
+                season=season,
+                run_id=self.run_id,
+                rejection_log_dir=rejection_dir
             )
-            self.log(f"  Cleaning complete. Output: {output_path}")
             return cleaned_df, output_path
         except Exception as e:
             self.log(f"Cleaning failed: {e}", logging.ERROR)
