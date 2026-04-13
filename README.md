@@ -693,12 +693,5 @@ df_recent = cleaned_df[cleaned_df["match_day"].str.extract(r"(\d+)")[0].astype(i
 
 ---
 
-## 📧 Contact & Support
-
-- **Repository:** <https://github.com/fufa-rst/Match-Analysis>
-- **Issues:** GitHub Issues tracker
-
----
-
 **Last Updated:** March 2026  
 **Version:** 2.0
