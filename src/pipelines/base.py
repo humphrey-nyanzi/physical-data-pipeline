@@ -32,7 +32,7 @@ class AnalysisPipeline(ABC):
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Base Output Directory (default)
-        self.base_output_dir = Path(getattr(args, 'output', './Output'))
+        self.base_output_dir = Path(getattr(args, 'output', './reports'))
         self.output_dir = self.base_output_dir
         
         # Metadata storage
@@ -82,14 +82,22 @@ class AnalysisPipeline(ABC):
     def setup_run_context(self):
         """
         Setup hierarchical output directory and logging context.
-        Hierarchy: Output / {Season} / {League} / {Command} / {Run_ID}
+        Hierarchy: reports / {Pipeline} / {Season} / {League} / run_{Run_ID}
         """
         season = getattr(self.args, 'season', 'unknown_season').replace('/', '-')
         league = getattr(self.args, 'league', 'unknown_league').upper()
         
         # Build hierarchical path
-        self.output_dir = self.base_output_dir / season / league / self.name.capitalize() / self.run_id
+        self.output_dir = self.base_output_dir / self.name.lower() / season / league / f"run_{self.run_id}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Setup source trace file
+        input_file = getattr(self.args, 'input', 'Unknown or Database')
+        trace_file = self.output_dir / "source_info.txt"
+        with open(trace_file, "w") as f:
+            f.write(f"Pipeline: {self.name.upper()}\n")
+            f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Source data: {input_file}\n")
         
         # Setup file logging for this specific run
         log_dir = Path("logs") / season / league

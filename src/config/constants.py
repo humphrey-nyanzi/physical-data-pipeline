@@ -168,13 +168,13 @@ AGGREGATE_RECOMPUTE_METRICS = [
 # ============================================================================
 
 # Raw data file location
-RAW_DATA_FILE = "./data/raw/raw_tracking_data.csv"
+RAW_DATA_FILE = "./data/01_raw/seasonal/raw_tracking_data.csv"
 
 # Processed data output paths
-PROCESSED_DATA_DIR = "./data/processed/"
+PROCESSED_DATA_DIR = "./data/02_processed/matches/"
 OUTPUT_REPORTS_DIR = "./reports/"
-OUTPUT_REPORTS_WOMENS_DIR = "./reports/womens_league/"
-OUTPUT_REPORTS_MENS_DIR = "./reports/mens_league/"
+OUTPUT_REPORTS_WOMENS_DIR = "./reports/seasonal/2024-25/WOMENS_LEAGUE/"
+OUTPUT_REPORTS_MENS_DIR = "./reports/seasonal/2024-25/MENS_LEAGUE/"
 
 # Processed CSV output naming
 WOMENS_LEAGUE_PROCESSED_OUTPUT = "womens_league_matches_clean.csv"

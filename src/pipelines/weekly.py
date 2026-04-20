@@ -27,9 +27,9 @@ class WeeklyPipeline(AnalysisPipeline):
     def register_arguments(cls, parser: argparse.ArgumentParser) -> None:
         """Register arguments for weekly report."""
         parser.add_argument("--md", type=int, required=True, help="Matchday Number (e.g., 12)")
-        parser.add_argument("--input", type=Path, default=Path("data/matchday_csvs"), 
+        parser.add_argument("--input", type=Path, default=Path("data/01_raw/weekly"), 
                            help="Input directory containing GPS tracking CSVs")
-        parser.add_argument("--output", type=Path, default=Path("Output/Weekly"), 
+        parser.add_argument("--output", type=Path, default=Path("reports"), 
                            help="Output directory for reports")
         parser.add_argument("--season", default="2025/2026", help="Season string (e.g., 2025/2026)")
         parser.add_argument("--league", default="mens_league", choices=["mens_league", "womens_league"], help="League (mens_league or womens_league)")

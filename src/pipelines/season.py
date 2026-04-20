@@ -61,7 +61,7 @@ class SeasonPipeline(AnalysisPipeline):
     def register_arguments(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--league", required=True, choices=['mens_league', 'womens_league'], help="League identifier")
         parser.add_argument("--input", required=True, type=Path, help="Path to raw CSV input file")
-        parser.add_argument("--output", default=Path("Output/Season"), type=Path, help="Base output directory")
+        parser.add_argument("--output", default=Path("reports"), type=Path, help="Base output directory")
         parser.add_argument("--skip-club-reports", action="store_true", help="Skip generation of individual club reports")
         parser.add_argument("--skip-cleaning", action="store_true", help="Skip data cleaning (use if input is already processed)")
         parser.add_argument("--timeframe", default="season", choices=['season', 'half_season'], 

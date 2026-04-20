@@ -58,7 +58,7 @@ class FullPipeline(AnalysisPipeline):
         )
         parser.add_argument(
             "--output",
-            default=Path("Output"),
+            default=Path("reports"),
             type=Path,
             help="Base output directory"
         )
