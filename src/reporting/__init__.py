@@ -2,7 +2,7 @@
 Reporting Module
 
 Consolidates report generation logic for creating comprehensive club-level
-Catapult performance reports.
+GPS performance reports.
 
 Submodules:
     - report_builder: Data aggregation and metric computation

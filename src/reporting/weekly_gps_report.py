@@ -32,17 +32,17 @@ class WeeklyGPSReportBuilder:
         self._add_missing_teams(missing_teams)
 
     def _add_title(self):
-        report_type = "GOALKEEPER" if self.gk_mode else "PHYSICAL PERFORMANCE (CATAPULT)"
-        league_name = "UGANDA PREMIER LEAGUE" if self.league.lower() == "upl" else "FUFA WOMEN SUPER LEAGUE"
+        report_type = "GOALKEEPER" if self.gk_mode else "PHYSICAL PERFORMANCE (GPS)"
+        league_name = "PREMIER LEAGUE" if self.league.lower() == "upl" else "WOMEN'S SUPER LEAGUE"
         title_text = f"GPS {report_type} REPORT FOR {league_name} {self.season} MATCHDAY {self.matchday_number}"
         self.doc.add_paragraph(title_text, style='Title')
         self.doc.add_page_break()
 
     def _add_introduction(self):
         self.doc.add_heading("1. Introduction", level=1)
-        league_full_name = "Uganda Premier League" if self.league.lower() == "upl" else "FUFA Women's Super League"
+        league_full_name = "Premier League" if self.league.lower() == "upl" else "Women's Super League"
         self.doc.add_paragraph(
-            f"This report provides a detailed analysis of the physical performance data captured via Catapult GPS technology "
+            f"This report provides a detailed analysis of the physical performance data captured via GPS tracking technology "
             f"during Matchday {self.matchday_number} of the {league_full_name} {self.season} season."
         )
         self.doc.add_paragraph(
@@ -147,7 +147,7 @@ class WeeklyGPSReportBuilder:
     def _add_missing_teams(self, missing_teams):
         if missing_teams:
             self.doc.add_heading("4. Teams Not Uploading Data", level=1)
-            self.doc.add_paragraph("The following teams did not submit their (Catapult) GPS data:")
+            self.doc.add_paragraph("The following teams did not submit their GPS tracking data:")
             for team in sorted(list(missing_teams)):
                 self.doc.add_paragraph(f"{team}", style='List Bullet')
 

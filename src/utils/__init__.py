@@ -1,5 +1,5 @@
 """
-Utilities package for FUFA Match Analysis.
+Utilities package for Match Analysis.
 
 Consolidates reusable functions for text processing, normalization,
 styling, document formatting, and console output.

@@ -76,7 +76,7 @@ class SeasonReportBuilder:
             self.doc, 
             title=display_title,
             subtitle=f"{self.league} | {self.season} Season",
-            logo_path=str(assets_dir / "fufa_logo.png")
+            logo_path=None
         )
         
         # Insert Table of Contents
@@ -110,7 +110,7 @@ class SeasonReportBuilder:
         self.doc.add_paragraph(
             f"This report presents a comprehensive analysis of the {self.league.upper()} "
             f"competitions for the {self.season} {self.timeframe.replace('_', ' ')}. "
-            "The data collected via Catapult wearable technology provides insights into the physical demands "
+            "The data collected via wearable GPS tracking technology provides insights into the physical demands "
             "and performance characteristics of the league."
         )
         self.doc.add_paragraph(

@@ -1,5 +1,5 @@
 """
-Configuration package for FUFA Match Analysis pipeline.
+Configuration package for Match Analysis pipeline.
 
 Exposes league definitions, constants, and configuration utilities.
 """
@@ -63,6 +63,8 @@ def analysis_config(reload: bool = False) -> Dict[str, Any]:
         with config_path.open("r", encoding="utf-8") as f:
             _analysis_config_cache = yaml.safe_load(f) or {}
     return _analysis_config_cache
+
+
 __all__ = [
     # League definitions
     "FWSL_CLUBS",

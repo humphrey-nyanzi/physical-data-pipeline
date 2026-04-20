@@ -1,14 +1,14 @@
 """
 Document Generation Module for DOCX Report Creation
 
-Low-level utilities for creating formatted Word documents from Catapult
+Low-level utilities for creating formatted Word documents from GPS
 performance analysis data. Handles styling, table insertion, visualization
 embedding, and document structure.
 
 Abstracts away python-docx API details to provide high-level document
 building functions for the reporting pipeline.
 
-Author: FUFA Research, Science & Technology Unit
+Author: Performance Analytics Team
 Version: 1.0
 """
 
@@ -241,7 +241,7 @@ def add_introduction_section(doc: Document, club_name: str, season: str = "2025/
     """
     Add standardized Introduction section to report.
 
-    Contains FUFA mission statement, Catapult investment rationale,
+    Contains mission statement, GPS investment rationale,
     report objectives and organization.
 
     Args:
@@ -251,11 +251,9 @@ def add_introduction_section(doc: Document, club_name: str, season: str = "2025/
     """
     doc.add_heading("Introduction", level=1)
     doc.add_paragraph(
-        """In a strategic move to elevate domestic football standards, the Federation of Uganda Football Associations (FUFA) has invested substantially in Catapult GPS systems for clubs in the Uganda Premier League and FUFA Women Super League. By equipping teams with this state-of-the-art performance monitoring technology, FUFA demonstrates its commitment to player development, optimized match preparation, and sustained competitive excellence.
+        """In a strategic move to elevate domestic football standards, the football federation invested substantially in GPS tracking systems for clubs across the top-tier leagues. By equipping teams with state-of-the-art performance monitoring technology, the federation demonstrates its commitment to player development, optimized match preparation, and sustained competitive excellence.
 
-On September 13 2024, The FUFA President, Hon. Eng Moses Hashim Magogo said "The data collected from the devices will not only benefit the individual clubs but will also be shared with the national team coaches" He further went on to say "This will enable the coaches to select players based on their performance data and tailor training sessions to meet the specific needs of the national team"
-
-The FUFA Research, Science and Technology (RST) has prepared this report focusing on {}'s physical performance during the {} season, leveraging Catapult tracking data to deliver actionable insights. The major objectives are to:
+This report focuses on {}'s physical performance during the {} season, leveraging GPS tracking data to deliver actionable insights. The major objectives are to:
 • Quantify player workloads and intensity metrics
 • Identify performance trends and outliers
 • Inform training load management, injury prevention, and tactical planning
@@ -268,8 +266,8 @@ The report is organized into seven sections:
 • Season Results: Individual and aggregated performance metrics (e.g., total distance, high-intensity efforts, accelerations)
 • Club Comparison: {} versus league averages to reveal relative strengths and areas for improvement
 • Challenges: Recurring issues such as inconsistent device usage, mislabelled sessions, failure to upload, mismanagement of equipment
-• Recommendations: Corrective measures including refresher training for Catapult operators, compliance to session naming protocols
-• FUFA Future Plans: Strategic initiatives to enhance data integration, reporting consistency, and long-term performance monitoring across all top-tier clubs
+• Recommendations: Corrective measures including refresher training for GPS operators, compliance to session naming protocols
+• Future Plans: Strategic initiatives to enhance data integration, reporting consistency, and long-term performance monitoring across all top-tier clubs
 """.format(club_name, season, club_name)
     )
 
@@ -286,13 +284,13 @@ def add_methodology_section(doc: Document, season: str = "2025/26") -> None:
     """
     doc.add_heading("Methodology", level=1)
     doc.add_paragraph("""
-This report is based on data collected using the Catapult GPS player tracking system during the {} football season. The data includes performance metrics such as total distance covered, sprint distance, work ratio, player load, session availability, top speed, accelerations, decelerations, energy, power plays, impacts, total actions, distance per minute.
+This report is based on data collected using a GPS player tracking system during the {} football season. The data includes performance metrics such as total distance covered, sprint distance, work ratio, player load, session availability, top speed, accelerations, decelerations, energy, power plays, impacts, total actions, distance per minute.
 """.format(season) + """
-Data was collected and uploaded by trained club staff immediately after match sessions. The FUFA Research, Science & Technology (RST) unit oversaw the data collection process, ensuring sessions were split by halves, correctly labelled, and uploaded within seventy-two (72) hours post-match. Where necessary, additional follow-up was done with the club operators to correct mislabelled sessions or fill in missing data, ensuring full coverage of match data.
+Data was collected and uploaded by trained club staff immediately after match sessions. The performance analytics unit oversaw the data collection process, ensuring sessions were split by halves, correctly labelled, and uploaded within seventy-two (72) hours post-match. Where necessary, additional follow-up was done with the club operators to correct mislabelled sessions or fill in missing data, ensuring full coverage of match data.
 
 The rigorous data cleaning process involved removing duplicates, resolving inconsistencies in player-pod assignments, and verifying that each match session met the minimum completeness threshold (e.g., full ninety (90) minutes, sufficient number of tracked players). Any session failing these criteria was excluded from further analysis to maintain consistency.
 
-Once cleaned, data was aggregated by individual player and by club. Metrics were normalized to account for variations in match frequency, squad size, and overall data availability, and clubs with fewer than ten complete sessions were omitted from comparative analyses. All statistical summaries and visualizations were generated using Microsoft Excel, Power BI, R, and Python, following established RST workflows to ensure reliable, consistent benchmarks for technical review and long-term planning.
+Once cleaned, data was aggregated by individual player and by club. Metrics were normalized to account for variations in match frequency, squad size, and overall data availability, and clubs with fewer than ten complete sessions were omitted from comparative analyses. All statistical summaries and visualizations were generated using Python, following established workflows to ensure reliable, consistent benchmarks for technical review and long-term planning.
     """)
 
 def add_key_concepts_section(doc: Document, season: str = "2025/26") -> None:
@@ -312,9 +310,9 @@ def add_key_concepts_section(doc: Document, season: str = "2025/26") -> None:
     doc.add_paragraph(
         """This section gives a basic introduction to coaches, analysts and any other personnel who may be interested in physical performance data. It includes basic definitions and brief descriptions of the metrics and terminology used in the field. It also includes a section of why a club should be interested in their physical data.
 
-Physical performance analysis: A method of collecting and interpreting data on a player's movement and workload during training or matches. By measuring total and sprint distance, player load and work ratios, performance staff can monitor fitness adaptations, manage fatigue and implement injury-prevention protocols. In the Uganda Premier League, several clubs have used these insights to adjust training loads and optimise readiness for crucial fixtures.
+Physical performance analysis: A method of collecting and interpreting data on a player's movement and workload during training or matches. By measuring total and sprint distance, player load and work ratios, performance staff can monitor fitness adaptations, manage fatigue and implement injury-prevention protocols. Clubs can use these insights to adjust training loads and optimise readiness for crucial fixtures.
 
-Catapult GPS technology: A wearable athlete-monitoring system that integrates global positioning sensors with inertial measurement units (accelerometers, gyroscopes and magnetometers) to capture real-time movement data at high sampling rates. After each session, devices sync to base stations and upload into the Catapult software suite, which calculates metrics such as sprint profiles, accelerations and overall player load. Clubs use this information to tailor individual conditioning programs and track recovery between matchdays.
+GPS tracking technology: A wearable athlete-monitoring system that integrates global positioning sensors with inertial measurement units (accelerometers, gyroscopes and magnetometers) to capture real-time movement data at high sampling rates. After each session, devices sync to base stations and upload into the tracking software suite, which calculates metrics such as sprint profiles, accelerations and overall player load. Clubs use this information to tailor individual conditioning programs and track recovery between matchdays.
 
 Volume: This refers to the total amount of physical work performed by a player over a training session or match. It captures aggregated outputs such as total distance covered or total number of accelerations and decelerations. Volume metrics help coaches gauge overall workload across a full session. Volume metrics include total distance, sprint distance, power plays, energy, impacts, accelerations, decelerations, total actions and player load.
 
@@ -322,7 +320,7 @@ Intensity: This refers to the rate or magnitude at which physical work is carrie
     """
     )
 
-    doc.add_paragraph("Catapult Metrics and Their Meaning")
+    doc.add_paragraph("GPS Metrics and Their Meaning")
 
     # Add metrics table
     metrics_data = {
@@ -424,17 +422,17 @@ def add_challenges_section(doc: Document) -> None:
     """
     doc.add_heading("Challenges", level=1)
     doc.add_paragraph(
-        """The challenges outlined below represent common operational and data management issues observed across multiple clubs using Catapult systems. These are not specific to any one club, but rather reflect broader trends that can impact the consistency, accuracy, and usefulness of performance data. From equipment mismanagement to gaps in staff training and session documentation, these hurdles can hinder the full potential of Catapult insights. Clubs experiencing similar difficulties or seeking tailored support are encouraged to contact the FUFA Research, Science and Technology (RST) Team, who can provide club-specific guidance and help implement effective solutions.
+        """The challenges outlined below represent common operational and data management issues observed across multiple clubs using GPS tracking systems. These are not specific to any one club, but rather reflect broader trends that can impact the consistency, accuracy, and usefulness of performance data. From equipment mismanagement to gaps in staff training and session documentation, these hurdles can hinder the full potential of tracking insights. Clubs experiencing similar difficulties or seeking tailored support are encouraged to contact the performance analytics team, who can provide club-specific guidance and help implement effective solutions.
 
 The challenges are outlined below:
 
-1. Inconsistent use of Catapult devices across games, leading to incomplete match coverage
+1. Inconsistent use of tracking devices across games, leading to incomplete match coverage
 2. Failure to upload sessions at all or delays in syncing which creates backlogs
 3. Misclassification of training sessions as games, and vice versa
 4. Incorrect session naming, making it difficult to locate or aggregate sessions
 5. Improper session splitting (e.g., durations recorded as < 90 minutes or > 120 minutes, incorrect splits for substituted players)
 6. Mismanagement of equipment leading to loss or damage
-7. Limited expertise in translating raw Catapult outputs into tactical or physiological insights
+7. Limited expertise in translating raw GPS outputs into tactical or physiological insights
 8. Club staff not fully trained on usage and upload procedures, resulting in missed or late uploads
         """
     )
@@ -442,7 +440,7 @@ The challenges are outlined below:
 
 def add_future_plans_section(doc: Document, season: str = "2025/26") -> None:
     """
-    Add standardized FUFA Future Plans section to report.
+    Add standardized Future Plans section to report.
 
     Outlines federation-level initiatives.
 
@@ -450,16 +448,16 @@ def add_future_plans_section(doc: Document, season: str = "2025/26") -> None:
         doc: python-docx Document object
         season: Football season (e.g., '2025/26')
     """
-    doc.add_heading("FUFA Future Plans", level=1)
+    doc.add_heading("Future Plans", level=1)
     doc.add_paragraph(
-        """This section outlines the strategic initiatives FUFA intends to roll out to maximize the impact of Catapult data across Uganda's top tier leagues. These federation-led actions build on the {} season insights and are designed to standardize workflows, deepen analysis, and support both club staff and players. For club-specific implementation advice or technical assistance, please contact the FUFA Research, Science and Technology (RST) unit.
+        """This section outlines strategic initiatives to maximize the impact of GPS tracking data across the top-tier leagues. These actions build on the {} season insights and are designed to standardize workflows, deepen analysis, and support both club staff and players. For club-specific implementation advice or technical assistance, please contact the performance analytics team.
 """.format(season) + """
 1. Conduct regular visits to the clubs to monitor equipment usage and share club specific insights.
-2. Organise regular training workshops for club performance staff on Catapult device management, data procedures and software analytics to ensure consistent, high-quality data capture.
-3. Leverage catapult data to inform nutritional guidance, tailoring macronutrient ratios to individual training demands and recovery needs.
+2. Organise regular training workshops for club performance staff on GPS device management, data procedures and software analytics to ensure consistent, high-quality data capture.
+3. Leverage tracking data to inform nutritional guidance, tailoring macronutrient ratios to individual training demands and recovery needs.
 4. Introduce individual performance benchmarks for every playing position (right back, centre forward, defensive midfielder, etc.) with detailed threshold bands for both volume and intensity at club level.
-5. Integrate Catapult metrics with tactical and technical analysis by linking GPS outputs to technical or tactical data generated by other systems, thereby providing coaches with combined insights into player movement patterns and team strategy.
-6. Carry out Research projects using catapult data along other data sources to improve planning.
+5. Integrate GPS metrics with tactical and technical analysis by linking tracking outputs to technical or tactical data generated by other systems, thereby providing coaches with combined insights into player movement patterns and team strategy.
+6. Carry out research projects using tracking data along other data sources to improve planning.
         """
     )
 
@@ -476,11 +474,11 @@ def add_conclusion_section(doc: Document, season: str = "2025/26") -> None:
     """
     doc.add_heading("Conclusion", level=1)
     doc.add_paragraph(
-        """We extend our sincere thanks to every coach, performance staff member and analyst for their dedication in collecting and interpreting Catapult data during the {} season. Your hard work has laid a solid foundation for evidence-based decision-making across fitness, recovery and match preparation.
+        """We extend our sincere thanks to every coach, performance staff member and analyst for their dedication in collecting and interpreting GPS tracking data during the {} season. Your hard work has laid a solid foundation for evidence-based decision-making across fitness, recovery and match preparation.
     """.format(season) + """
-All Catapult outputs and associated player information will be handled in strict accordance with the FUFA data privacy and security policy, ensuring confidentiality, ethical use and compliant storage. This protocol safeguards both individual rights and the integrity of our performance analysis.
+All tracking outputs and associated player information will be handled in strict accordance with the data privacy and security policy, ensuring confidentiality, ethical use and compliant storage. This protocol safeguards both individual rights and the integrity of our performance analysis.
 
-As we move into the next season, we look forward to your feedback and stand ready to support your club through FUFA's Research, Science and Technology unit. You can reach us via email on fufa.rst@gmail.com
+As we move into the next season, we look forward to your feedback and stand ready to support your club through the performance analytics team. You can reach us via email at analytics@example.com
         """
     )
 
@@ -581,6 +579,6 @@ def create_report_document(club_name: str) -> Document:
         python-docx Document object
     """
     doc = Document()
-    doc.add_heading(f"{club_name} Catapult Report", 0)
+    doc.add_heading(f"{club_name} Performance Report", 0)
     doc.add_page_break()
     return doc

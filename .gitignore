@@ -67,3 +67,13 @@ Thumbs.db
 
 #qodo
 .qodo
+
+# Anonymisation: Exclude institutional data
+notebook_archive/
+experiments/
+
+# Anonymisation: Private mapping (do not commit)
+anonymisation_mapping.json
+
+# Anonymisation: Institutional logo asset (remove before release)
+src/reporting/assets/fufa_logo.png

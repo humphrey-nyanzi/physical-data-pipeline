@@ -4,7 +4,7 @@ from src.utils.text_parsing import parse_player_details
 def extract_metrics(df, csv_file, log_func=print):
     """
     Extract required metrics from dataframe.
-    Uses exact Catapult column names from user's CSV.
+    Uses exact GPS device column names from user's CSV.
     And parses player names.
     
     IMPORTANT: This function now keeps ALL original columns from the dataset,
@@ -14,7 +14,7 @@ def extract_metrics(df, csv_file, log_func=print):
     # Core columns that MUST exist
     required_cols = [
         'Player Name',
-        'Duration',  # In minutes according to Catapult
+        'Duration',  # In minutes according to GPS device export
         'Distance (km)',
         'Sprint Distance (m)',
         'Top Speed (km/h)',
@@ -82,7 +82,7 @@ def aggregate_halves(df, log_func=print):
     from src.config import constants
     
     # Identify the split/period column
-    # Common Catapult names: 'Split Name', 'Period Name'
+    # Common GPS export names: 'Split Name', 'Period Name'
     split_col = next((c for c in df.columns if c in ['Split Name', 'Period Name']), None)
     
     if split_col:

@@ -13,8 +13,8 @@ import seaborn as sns
 from io import BytesIO
 # import matplotlib.ticker as ticker # Unused for now
 
-# FUFA Brand Color Palette
-FUFA_COLORS = {
+# Brand Color Palette
+BRAND_COLORS = {
     'dark_blue': '#333d92',
     'light_blue': '#007bc1',
     'mid_blue': '#353b91',
@@ -25,13 +25,13 @@ FUFA_COLORS = {
     'gray': '#CCCCCC',
 }
 
-# Chart color gradients - uses FUFA primaries with intermediate shades
-FUFA_GRADIENT_3 = [FUFA_COLORS['dark_blue'], FUFA_COLORS['light_blue'], '#5B7DA3']
-FUFA_GRADIENT_5 = ['#B8D4E8', '#8FA3C1', '#5B7DA3', FUFA_COLORS['light_blue'], FUFA_COLORS['dark_blue']]
+# Chart color gradients - uses brand primaries with intermediate shades
+BRAND_GRADIENT_3 = [BRAND_COLORS['dark_blue'], BRAND_COLORS['light_blue'], '#5B7DA3']
+BRAND_GRADIENT_5 = ['#B8D4E8', '#8FA3C1', '#5B7DA3', BRAND_COLORS['light_blue'], BRAND_COLORS['dark_blue']]
 
 # Enhanced gradients for creative chart styling
-FUFA_GRADIENT_HOLLOW = ['#E8EFF6', '#5B7DA3', FUFA_COLORS['dark_blue']]  # For subtle backgrounds
-FUFA_SEQUENTIAL = ['#D9E7F7', '#8FA3C1', '#5B7DA3', FUFA_COLORS['light_blue'], FUFA_COLORS['dark_blue']]  # Light to dark
+BRAND_GRADIENT_HOLLOW = ['#E8EFF6', '#5B7DA3', BRAND_COLORS['dark_blue']]  # For subtle backgrounds
+BRAND_SEQUENTIAL = ['#D9E7F7', '#8FA3C1', '#5B7DA3', BRAND_COLORS['light_blue'], BRAND_COLORS['dark_blue']]  # Light to dark
 
 def create_color_gradient(start_color: str, end_color: str, n_colors: int = 5) -> List[str]:
     """Generate smooth color gradient between two colors."""
@@ -49,8 +49,8 @@ try:
 except ImportError:
     HTML = None  # Optional: for non-notebook environments
 
-def apply_fufa_chart_theme(ax, remove_y_labels=False, remove_y_ticks=False, remove_x_labels=False):
-    """Apply professional FUFA brand styling to chart axes with creative enhancements.
+def apply_brand_chart_theme(ax, remove_y_labels=False, remove_y_ticks=False, remove_x_labels=False):
+    """Apply professional brand styling to chart axes with creative enhancements.
     
     Features:
     - Modern typography using Aptos Display/Sans-serif stack
@@ -90,16 +90,16 @@ def apply_fufa_chart_theme(ax, remove_y_labels=False, remove_y_ticks=False, remo
 
 def apply_professional_style(ax, title: str, xlabel: str = '', ylabel: str = ''):
     """
-    Apply professional FUFA brand styling with creative enhancements.
+    Apply professional brand styling with creative enhancements.
     
     Uses selective bold (titles only), modern typography, and 
-    improved contrast for readability while maintaining FUFA branding.
+    improved contrast for readability while maintaining branding.
     """
-    apply_fufa_chart_theme(ax)
+    apply_brand_chart_theme(ax)
     
     # Title - bold and prominent
     if title:
-        ax.set_title(title, fontsize=12.5, fontweight='bold', pad=18, color=FUFA_COLORS['dark_blue'])
+        ax.set_title(title, fontsize=12.5, fontweight='bold', pad=18, color=BRAND_COLORS['dark_blue'])
     
     # Axis labels - regular weight, darker color for contrast
     if xlabel:
@@ -224,7 +224,7 @@ def plot_matchdays_per_club(
     league: str = "fwsl",
     figsize: Tuple[int, int] = (12, 6),
 ) -> None:
-    """Plot bar chart of matchdays analysed per club with creative FUFA styling.
+    """Plot bar chart of matchdays analysed per club with creative brand styling.
     
     Features:
     - Narrower bars with white edges for cleaner appearance
@@ -241,11 +241,11 @@ def plot_matchdays_per_club(
 
     def tier_color(val):
         if val >= tiers["high"]:
-            return FUFA_COLORS['dark_blue']
+            return BRAND_COLORS['dark_blue']
         elif val >= tiers["medium"]:
-            return FUFA_COLORS['light_blue']
+            return BRAND_COLORS['light_blue']
         else:
-            return FUFA_COLORS['red']
+            return BRAND_COLORS['red']
 
     colors = data["unique_matchdays"].map(tier_color).tolist()
 
@@ -270,7 +270,7 @@ def plot_matchdays_per_club(
         color="#808080", fontsize=8, style='italic', fontweight='400'
     )
 
-    apply_fufa_chart_theme(ax, remove_y_labels=True, remove_y_ticks=False)
+    apply_brand_chart_theme(ax, remove_y_labels=True, remove_y_ticks=False)
     
     # Professional x-axis labels
     ax.set_xticks(range(len(data)))
@@ -310,11 +310,11 @@ def plot_stacked_bar_coverage(
     max_matchdays: int = 22,
     figsize: Tuple[int, int] = (12, 6),
 ) -> None:
-    """Plot stacked bar chart with creative FUFA styling.
+    """Plot stacked bar chart with creative brand styling.
     
     Features:
     - Narrower bars with white edges for hollow effect
-    - FUFA color hierarchy: dark blue (primary), light blue (secondary), red (gaps)
+    - brand color hierarchy: dark blue (primary), light blue (secondary), red (gaps)
     - Professional typography and minimal visual clutter
     """
     data = coverage_df.sort_values("Analysed Matchdays", ascending=False).copy()
@@ -325,9 +325,9 @@ def plot_stacked_bar_coverage(
             data[col] = 0
 
     colors = {
-        "Analysed Matchdays": FUFA_COLORS['dark_blue'],
-        "Pending": FUFA_COLORS['light_blue'],
-        "Not Uploaded": FUFA_COLORS['red'],
+        "Analysed Matchdays": BRAND_COLORS['dark_blue'],
+        "Pending": BRAND_COLORS['light_blue'],
+        "Not Uploaded": BRAND_COLORS['red'],
     }
 
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
@@ -367,7 +367,7 @@ def plot_stacked_bar_coverage(
         color="#808080", fontsize=8, style='italic', fontweight='400'
     )
 
-    apply_fufa_chart_theme(ax)
+    apply_brand_chart_theme(ax)
     
     ax.set_xticks(x)
     ax.set_xticklabels([c.upper() for c in data["club_for"]], 
@@ -389,7 +389,7 @@ def plot_top_performers_bar(
     figsize: Tuple[int, int] = (10, 8),
     color: str = None
 ):
-    """Plot horizontal bar chart with creative FUFA styling.
+    """Plot horizontal bar chart with creative brand styling.
     
     Features:
     - Horizontal bars for better readability of player names
@@ -397,7 +397,7 @@ def plot_top_performers_bar(
     - Clear value labels with professional typography
     """
     if color is None:
-        color = FUFA_COLORS['dark_blue']
+        color = BRAND_COLORS['dark_blue']
         
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
     df_sorted = leaderboard_df.sort_values(metric, ascending=True).tail(15)  # Top 15
@@ -415,7 +415,7 @@ def plot_top_performers_bar(
             width, bar.get_y() + bar.get_height()/2, 
             ' ' + val_str, 
             ha='left', va='center', fontweight='600', fontsize=9, 
-            color=FUFA_COLORS['dark_blue']
+            color=BRAND_COLORS['dark_blue']
         )
     
     apply_professional_style(ax, f"Top Performers – {metric_name}", metric_name, "")
@@ -439,7 +439,7 @@ def plot_league_trend(
     - Proper axis handling with readable labels
     """
     if color is None:
-        color = FUFA_COLORS['dark_blue']
+        color = BRAND_COLORS['dark_blue']
         
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
     
@@ -471,7 +471,7 @@ def plot_coverage_heatmap(
     figsize: Tuple[int, int] = (12, 8)
 ):
     """
-    Plot heatmap with FUFA color scheme.
+    Plot heatmap with brand color scheme.
     
     Features:
     - Professional color mapping (red=missing, dark blue=analysed)
@@ -480,7 +480,7 @@ def plot_coverage_heatmap(
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
     
     from matplotlib.colors import ListedColormap
-    cmap = ListedColormap(['#F5CCCC', FUFA_COLORS['dark_blue']])
+    cmap = ListedColormap(['#F5CCCC', BRAND_COLORS['dark_blue']])
     
     sns.heatmap(grid_df, cmap=cmap, cbar=False, linewidths=1, 
                linecolor='white', ax=ax, annot=False)
@@ -505,7 +505,7 @@ def plot_metric_histogram(
     - Professional layout with removable elements
     """
     if color is None:
-        color = FUFA_COLORS['light_blue']
+        color = BRAND_COLORS['light_blue']
         
     fig, ax = plt.subplots(figsize=(9, 6), facecolor='white')
     
@@ -513,7 +513,7 @@ def plot_metric_histogram(
     n, bins, patches = ax.hist(
         df[metric].dropna(), bins=22, 
         color=color, alpha=0.75, 
-        edgecolor=FUFA_COLORS['dark_blue'], linewidth=1
+        edgecolor=BRAND_COLORS['dark_blue'], linewidth=1
     )
     
     # KDE overlay in dark blue
@@ -521,13 +521,13 @@ def plot_metric_histogram(
     kde = sp_stats.gaussian_kde(df[metric].dropna())
     x_range = np.linspace(df[metric].min(), df[metric].max(), 100)
     ax2 = ax.twinx()
-    ax2.plot(x_range, kde(x_range), color=FUFA_COLORS['dark_blue'], linewidth=2.5)
+    ax2.plot(x_range, kde(x_range), color=BRAND_COLORS['dark_blue'], linewidth=2.5)
     ax2.set_ylabel('')
     ax2.set_yticks([])
     
     # Mean reference line - subtle
     mean_val = df[metric].mean()
-    ax.axvline(mean_val, color=FUFA_COLORS['red'], linestyle='--', 
+    ax.axvline(mean_val, color=BRAND_COLORS['red'], linestyle='--', 
               linewidth=1.5, alpha=0.6, label=f'Mean: {mean_val:.2f}')
     
     apply_professional_style(ax, f"{metric_name} Distribution", metric_name, "Frequency")
@@ -574,10 +574,10 @@ def plot_rolling_trend_grid(
         # Rolling trend
         if len(daily) >= window:
             rolling = daily[metric].rolling(window=window, min_periods=1).mean()
-            l2, = ax.plot(range(len(daily)), rolling, color=FUFA_COLORS['dark_blue'], 
+            l2, = ax.plot(range(len(daily)), rolling, color=BRAND_COLORS['dark_blue'], 
                          linewidth=3, label=f'{window}-MD Rolling' if i == 0 else "", 
                          marker='o', markersize=6, markerfacecolor='white', 
-                         markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2)
+                         markeredgecolor=BRAND_COLORS['dark_blue'], markeredgewidth=2)
             if i == 0:
                 lines.extend([l1, l2])
                 labels.extend(['Match Day Avg', f'{window}-MD Rolling'])
@@ -599,7 +599,7 @@ def plot_speed_zones_stacked(
     title: str = "Speed Zones by Position"
 ):
     """
-    Plot 100% stacked bars with FUFA color gradient.
+    Plot 100% stacked bars with brand color gradient.
     
     Features:
     - Creative gradient from light to dark blue
@@ -610,7 +610,7 @@ def plot_speed_zones_stacked(
     
     stats_df.plot(
         kind='bar', stacked=True, ax=ax, 
-        color=FUFA_GRADIENT_5, alpha=0.92, 
+        color=BRAND_GRADIENT_5, alpha=0.92, 
         width=0.65, edgecolor='white', linewidth=2
     )
     
@@ -642,7 +642,7 @@ def plot_context_comparison(
     """
     fig, ax = plt.subplots(figsize=(9, 6), facecolor='white')
     
-    bars = ax.bar(context_df.index, context_df[metric], color=FUFA_COLORS['dark_blue'], 
+    bars = ax.bar(context_df.index, context_df[metric], color=BRAND_COLORS['dark_blue'], 
                  alpha=0.9, edgecolor='white', linewidth=1.5, width=0.6)
     
     # Apply gradient
@@ -658,7 +658,7 @@ def plot_context_comparison(
         ax.text(bar.get_x() + bar.get_width()/2., height + (max_val * 0.02),
                f'{height:.1f}',
                ha='center', va='bottom', fontsize=10, fontweight='600', 
-               color=FUFA_COLORS['dark_blue'])
+               color=BRAND_COLORS['dark_blue'])
     
     apply_professional_style(ax, f"{metric_name} by {xlabel}", xlabel, metric_name)
     ax.set_xticklabels(context_df.index, fontsize=9.5, fontweight='400')
@@ -670,7 +670,7 @@ def plot_matchday_club_heatmap(
     grid_df: pd.DataFrame,
     figsize: Tuple[int, int] = (14, 8),
 ) -> None:
-    """Plot heatmap with professional FUFA styling.
+    """Plot heatmap with professional brand styling.
     
     Features:
     - Intuitive color scheme (red=missing, dark blue=analysed)
@@ -682,7 +682,7 @@ def plot_matchday_club_heatmap(
     clubs = grid_df.columns.tolist()
     matchdays = grid_df.index.tolist()
 
-    color_map = {1: FUFA_COLORS['dark_blue'], 0: '#F5CCCC'}
+    color_map = {1: BRAND_COLORS['dark_blue'], 0: '#F5CCCC'}
 
     fig, ax = plt.subplots(figsize=figsize, facecolor='white')
 
@@ -754,15 +754,15 @@ def plot_metric_trend(
         upper = trend_df[mean_col] + trend_df[std_col]
         lower = trend_df[mean_col] - trend_df[std_col]
         ax.fill_between(range(len(trend_df)), lower, upper, 
-                       alpha=0.12, color=FUFA_COLORS['dark_blue'], label='±1 Std Dev')
+                       alpha=0.12, color=BRAND_COLORS['dark_blue'], label='±1 Std Dev')
 
     # Line plot with professional styling
     ax.plot(
         range(len(trend_df)), trend_df[mean_col],
-        marker="o", linewidth=2.5, color=FUFA_COLORS['dark_blue'],
+        marker="o", linewidth=2.5, color=BRAND_COLORS['dark_blue'],
         label=f"{metric} (Mean)",
         markersize=8, markerfacecolor='white',
-        markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2
+        markeredgecolor=BRAND_COLORS['dark_blue'], markeredgewidth=2
     )
 
     apply_professional_style(ax, f"{metric} Trend Over Season", "Match Day", metric)
@@ -814,7 +814,7 @@ def plot_positional_metrics(
     for ax, metric in zip(axes, metrics):
         bars = ax.bar(
             data_to_plot["Position"], data_to_plot[metric],
-            color=FUFA_COLORS['dark_blue'], edgecolor='white', 
+            color=BRAND_COLORS['dark_blue'], edgecolor='white', 
             linewidth=1.5, alpha=0.92, width=0.65
         )
         
@@ -823,7 +823,7 @@ def plot_positional_metrics(
             height = bar.get_height()
             ax.text(bar.get_x() + bar.get_width()/2., height,
                    f'{height:.2f}', ha='center', va='bottom', 
-                   fontsize=9, fontweight='600', color=FUFA_COLORS['dark_blue'])
+                   fontsize=9, fontweight='600', color=BRAND_COLORS['dark_blue'])
         
         apply_professional_style(ax, metric, "Position", "Value")
         ax.set_xticklabels(data_to_plot["Position"], rotation=45, ha='right', 
@@ -863,9 +863,9 @@ def plot_players_per_matchday(
     # Main line
     ax.plot(
         x, y, marker='o', linewidth=2.5,
-        color=FUFA_COLORS['light_blue'],
+        color=BRAND_COLORS['light_blue'],
         markersize=8, markerfacecolor='white',
-        markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2
+        markeredgecolor=BRAND_COLORS['dark_blue'], markeredgewidth=2
     )
     
     # Annotate each point with value in a subtle badge
@@ -875,10 +875,10 @@ def plot_players_per_matchday(
                 f'{int(val)}', (i, val),
                 textcoords="offset points", xytext=(0, 14),
                 ha='center', fontsize=8, fontweight='600',
-                color=FUFA_COLORS['dark_blue'],
+                color=BRAND_COLORS['dark_blue'],
                 bbox=dict(
                     boxstyle="circle,pad=0.3",
-                    edgecolor=FUFA_COLORS['light_blue'],
+                    edgecolor=BRAND_COLORS['light_blue'],
                     facecolor='white', linewidth=1
                 )
             )
@@ -956,17 +956,17 @@ def plot_club_metrics_trend(
         # Rolling average (standing out)
         if len(data) >= window:
             rolling_y = data[col].rolling(window=window, min_periods=1).mean()
-            l2, = ax.plot(x, rolling_y, color=FUFA_COLORS['dark_blue'], 
+            l2, = ax.plot(x, rolling_y, color=BRAND_COLORS['dark_blue'], 
                          linewidth=3, label=f'{window}-Match Rolling Avg' if i == 0 else "",
                          marker='o', markersize=6, markerfacecolor='white', 
-                         markeredgecolor=FUFA_COLORS['dark_blue'], markeredgewidth=2)
+                         markeredgecolor=BRAND_COLORS['dark_blue'], markeredgewidth=2)
             if i == 0:
                 lines.extend([l1, l2])
                 labels.extend(['Match Day Avg', f'{window}-Match Rolling Avg'])
         
         # Season average line
         avg_value = data[col].mean()
-        l3 = ax.axhline(avg_value, color=FUFA_COLORS['red'], linestyle='--',
+        l3 = ax.axhline(avg_value, color=BRAND_COLORS['red'], linestyle='--',
                        linewidth=1.2, alpha=0.7,
                        label=f'Season Avg' if i == 0 else "")
         if i == 0:
@@ -981,7 +981,7 @@ def plot_club_metrics_trend(
             # Round labels (only once or subtly)
             ymin, ymax = ax.get_ylim()
             ax.text(split_idx / 2, ymin + (ymax - ymin) * 0.02,
-                    'First Round', color=FUFA_COLORS['dark_blue'],
+                    'First Round', color=BRAND_COLORS['dark_blue'],
                     fontsize=9, ha='center', alpha=0.5, style='italic')
             ax.text(split_idx + (len(data) - split_idx) / 2,
                     ymin + (ymax - ymin) * 0.02,
@@ -1003,7 +1003,7 @@ def plot_club_metrics_trend(
     
     if club_name:
         fig.suptitle(f'{club_name} – Physical Performance Trends', fontsize=16,
-                     fontweight='bold', color=FUFA_COLORS['dark_blue'], y=1.02)
+                     fontweight='bold', color=BRAND_COLORS['dark_blue'], y=1.02)
     
     plt.tight_layout()
     # Adjust layout to make room for bottom legend if needed
@@ -1031,7 +1031,7 @@ def plot_speed_zone_by_position(
     
     zone_pct.plot(
         kind='bar', stacked=True, ax=ax,
-        color=FUFA_SEQUENTIAL[:len(zone_pct.columns)],
+        color=BRAND_SEQUENTIAL[:len(zone_pct.columns)],
         alpha=0.92, width=0.65, edgecolor='white', linewidth=1.5
     )
     

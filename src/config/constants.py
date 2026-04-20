@@ -91,7 +91,7 @@ CORE_METRICS = [
 # Acceleration/Deceleration Zone Definitions
 # ============================================================================
 
-# Column names for acceleration zones in raw Catapult data
+# Column names for acceleration zones in raw GPS tracking data
 ACCELERATION_ZONE_COLUMNS = [
     "accelerations_zone_count:_1__2_mss",
     "accelerations_zone_count:_2__3_mss",
@@ -99,7 +99,7 @@ ACCELERATION_ZONE_COLUMNS = [
     "accelerations_zone_count:_>_4_mss",
 ]
 
-# Column names for deceleration zones in raw Catapult data
+# Column names for deceleration zones in raw GPS tracking data
 DECELERATION_ZONE_COLUMNS = [
     "deceleration_zone_count:_1__2_mss",
     "deceleration_zone_count:_2__3_mss",
@@ -168,7 +168,7 @@ AGGREGATE_RECOMPUTE_METRICS = [
 # ============================================================================
 
 # Raw data file location
-RAW_DATA_FILE = "./data/raw/all_catapult_data_16_Jul_25.csv"
+RAW_DATA_FILE = "./data/raw/raw_tracking_data.csv"
 
 # Processed data output paths
 PROCESSED_DATA_DIR = "./data/processed/"
@@ -236,22 +236,22 @@ SUMMARY_STATISTICS_INTENSITY = ["max", "mean", "std"]
 
 # Club name normalization rules
 CLUB_CORRECTIONS_FWSL = {
-    "Uganda Martyrs Hs": "Uganda Martyrs Lubaga WFC",
-    "Uganda Martyr'S Hs": "Uganda Martyrs Lubaga WFC",
-    "Uganda Martrys": "Uganda Martyrs Lubaga WFC",
-    "She Corporate Wfc": "She Corporates FC",
-    "Olila High School": "Olila HS WFC",
-    "Wakiso Hills": "Wakiso Hill WFC",
-    "She Coperates": "She Corporates FC",
+    "Heritage Hs": "Heritage WFC",
+    "Heritage'S Hs": "Heritage WFC",
+    "Heritge": "Heritage WFC",
+    "Corporate Wfc": "Corporate FC",
+    "Academy High School": "Academy HS WFC",
+    "Hillside Hills": "Hillside WFC",
+    "Corprate": "Corporate FC",
 }
 
 # Club name normalization rules for UPL
 CLUB_CORRECTIONS_UPL = {
-    "Solitilo Bright Stars": "Soltilo Bright Stars FC",
-    "Soltito Bright Stars": "Soltilo Bright Stars FC",
-    "Solitilo": "Soltilo Bright Stars FC",
-    "Soliyilo": "Soltilo Bright Stars FC",
-    "Lugzi": "Lugazi FC",
+    "Brite Stars": "Bright Stars FC",
+    "Brght Stars": "Bright Stars FC",
+    "Brite": "Bright Stars FC",
+    "Briht": "Bright Stars FC",
+    "Industral": "Industrial FC",
 }
 
 # ============================================================================

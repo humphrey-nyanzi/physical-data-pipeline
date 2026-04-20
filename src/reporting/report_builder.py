@@ -2,13 +2,13 @@
 Report Builder Module for Club-Level Performance Reports
 
 Consolidates data aggregation and metric computation logic for generating
-comprehensive club-level Catapult performance reports. Abstracts away from
+comprehensive club-level GPS performance reports. Abstracts away from
 document generation to enable reusable data preparation for multiple output formats.
 
 Functions are league-agnostic and parameterized by league identifier.
 All constants and configuration sourced from src/config modules.
 
-Author: FUFA Research, Science & Technology Unit
+Author: Performance Analytics Team
 Version: 1.0
 """
 

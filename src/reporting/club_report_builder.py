@@ -90,12 +90,12 @@ class ClubReportBuilder:
         ReportStyles.apply_heading_styles(doc)
         
         # 3. Add Front Matter
-        # Note: logo_path uses fufa_logo.png as the only permitted asset.
+        # Note: logo_path is optional; set to None or provide a custom logo path.
         add_title_page(
             doc, 
             title=f"Performance Analysis Report: {self.club}",
             subtitle=f"{self.league} | {self.season} Season",
-            logo_path=str(Path(__file__).parent / "assets" / "fufa_logo.png")
+            logo_path=None
         )
         
         add_table_of_contents(doc)

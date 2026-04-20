@@ -1,5 +1,5 @@
 """
-League-specific definitions and club rosters for FUFA football leagues.
+League-specific definitions and club rosters for football leagues.
 
 This module defines the official club names, session patterns, and match day
 configurations for different football leagues to ensure consistent data validation
@@ -7,25 +7,21 @@ and normalization across the codebase.
 """
 
 # ============================================================================
-# FWSL (Football Women's Super League) - Ugandan Women's Top Tier
-# ============================================================================
-
-# ============================================================================
-# FWSL (Football Women's Super League) - Ugandan Women's Top Tier
+# FWSL (Women's Super League) - Women's Top Tier
 # ============================================================================
 
 FWSL_CLUBS_BY_SEASON = {
     "2024/2025": [
-        "Kampala Queens FC", "She Maroons FC", "Makerere University WFC",
-        "Uganda Martyrs Lubaga WFC", "Kawempe Muslim LFC", "Wakiso Hill WFC",
-        "Olila HS WFC", "Rines SS WFC", "Amus College WFC",
-        "She Corporates FC", "Lady Doves FC", "FC Tooro Queens"
+        "Phoenix FC", "Valkyrie FC", "University WFC",
+        "Heritage WFC", "Crescent LFC", "Hillside WFC",
+        "Academy HS WFC", "Sterling SS WFC", "College WFC",
+        "Corporate FC", "Lady Hawks FC", "FC Queens"
     ],
     "2025/2026": [
-        "Kampala Queens FC", "She Maroons FC", "Makerere University WFC",
-        "Uganda Martyrs Lubaga WFC", "Kawempe Muslim LFC", "Asubo Ladies FC",
-        "Olila HS WFC", "Rines SS WFC", "Amus College WFC", 
-        "She Corporates FC", "Lady Doves FC", "St Noa Girls-Zana FC"  # Placeholder: Update if promotion/relegation changes
+        "Phoenix FC", "Valkyrie FC", "University WFC",
+        "Heritage WFC", "Crescent LFC", "Astra Ladies FC",
+        "Academy HS WFC", "Sterling SS WFC", "College WFC", 
+        "Corporate FC", "Lady Hawks FC", "Saints Girls FC"  # Placeholder: Update if promotion/relegation changes
     ]
 }
 
@@ -35,7 +31,7 @@ FWSL_CLUBS = FWSL_CLUBS_BY_SEASON["2025/2026"]
 FWSL_SESSION_PATTERN = r"^W?md\s*\d+\s*-.*"
 """
 Expected FWSL session title format: 'Wmd{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
-Example: 'Wmd1-Kampala Queens Fc-Olila HS WFC-Home-League-Win'
+Example: 'Wmd1-Phoenix Fc-Academy HS WFC-Home-League-Win'
 """
 
 FWSL_USAGE_TIER_THRESHOLDS = {
@@ -45,34 +41,34 @@ FWSL_USAGE_TIER_THRESHOLDS = {
 }
 
 FWSL_UPLOADED_MATCHES = {
-    "She Maroons FC": 20,
-    "Kawempe Muslim LFC": 22,
-    "Uganda Martyrs Lubaga WFC": 18,
-    "Rines SS WFC": 22,
-    "Amus College WFC": 19,
-    "Wakiso Hill WFC": 18,
-    "Lady Doves FC": 16,
-    "Makerere University WFC": 22,
-    "Kampala Queens FC": 17,
-    "Olila HS WFC": 13,
-    "She Corporates FC": 5,
-    "FC Tooro Queens": 0,
+    "Valkyrie FC": 20,
+    "Crescent LFC": 22,
+    "Heritage WFC": 18,
+    "Sterling SS WFC": 22,
+    "College WFC": 19,
+    "Hillside WFC": 18,
+    "Lady Hawks FC": 16,
+    "University WFC": 22,
+    "Phoenix FC": 17,
+    "Academy HS WFC": 13,
+    "Corporate FC": 5,
+    "FC Queens": 0,
 }
 
 # ============================================================================
-# UPL (Uganda Premier League) - Ugandan Men's Top Tier
+# UPL (Premier League) - Men's Top Tier
 # ============================================================================
 
 UPL_CLUBS_BY_SEASON = {
     "2024/2025": [
-        "KCCA FC", "BUL FC", "URA FC", "Vipers SC", "Express FC", "SC Villa",
-        "Maroons FC", "Wakiso Giants FC", "Soltilo Bright Stars FC", "Police FC",
-        "UPDF FC", "NEC FC", "Mbarara City FC", "Kitara FC", "Lugazi FC", "Mbale Heroes FC"
+        "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Express FC", "SC Villa",
+        "Garrison FC", "Lakeside Giants FC", "Bright Stars FC", "Shield FC",
+        "Army FC", "Eastern FC", "Western City FC", "Central FC", "Industrial FC", "Mountain Heroes FC"
     ],
     "2025/2026": [
-         "KCCA FC", "BUL FC", "URA FC", "Vipers SC", "Express FC", "SC Villa",
-        "Maroons FC", "Buhimba United Saints FC", "Calvary FC", "Police FC",
-        "UPDF FC", "NEC FC", "Mbarara City FC", "Kitara FC", "Lugazi FC", "Entebbe UPPC FC"
+         "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Express FC", "SC Villa",
+        "Garrison FC", "United Saints FC", "Calvary FC", "Shield FC",
+        "Army FC", "Eastern FC", "Western City FC", "Central FC", "Industrial FC", "Laketown FC"
         
     ]
 }
@@ -83,7 +79,7 @@ UPL_CLUBS = UPL_CLUBS_BY_SEASON["2025/2026"]
 UPL_SESSION_PATTERN = r"^Md\s*\d+\s*-.*"
 """
 Expected UPL session title format: 'Md{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
-Example: 'Md1-Kcca Fc-Ura Fc-Home-League-Win'
+Example: 'Md1-Capital Fc-Revenue Fc-Home-League-Win'
 """
 
 UPL_USAGE_TIER_THRESHOLDS = {
@@ -139,7 +135,7 @@ POSITION_MAPPING = {
 
 # Aliases for position mapping (common typos or variants)
 POSITION_ALIASES = {
-    "muslim-am": "am",  # FWSL-specific typo
+    "muslim-am": "am",  # League-specific typo
     "f": "fwd",  # Single letter abbreviation
 }
 
@@ -184,20 +180,20 @@ UPL_POSITION_GROUPS = {
 # ============================================================================
 
 UPL_MISSING_POSITIONS = {
-    "Saidi Mayanja": "CM",
-    "Ashraf Mugume": "CM",
-    "Musitafa Mujuzi": "CB",
-    "Bright Anukani": "AM",
-    "Kiza Arafat": "AM",
-    "Joel Sserunjogi": "DM",
-    "Katenga Etienne Openga": "LW",
-    "Hassan Muhamud": "CB",
-    "Derrick Paul": "LW",
-    "Emmanuel Anyama": "CF",
-    "Abubaker Mayanja": "CF",
-    "Isa Mibiru": "LB",
-    "Julius Poloto": "MD",
-    "Peter Magambo": "DM",
+    "Player_01": "CM",
+    "Player_02": "CM",
+    "Player_03": "CB",
+    "Player_04": "AM",
+    "Player_05": "AM",
+    "Player_06": "DM",
+    "Player_07": "LW",
+    "Player_08": "CB",
+    "Player_09": "LW",
+    "Player_10": "CF",
+    "Player_11": "CF",
+    "Player_12": "LB",
+    "Player_13": "MD",
+    "Player_14": "DM",
 }
 
 # ============================================================================
@@ -206,7 +202,7 @@ UPL_MISSING_POSITIONS = {
 
 LEAGUE_CONFIG = {
     "fwsl": {
-        "name": "FUFA Women's Super League",
+        "name": "Women's Super League",
         "clubs_by_season": FWSL_CLUBS_BY_SEASON,
         "clubs": FWSL_CLUBS, # Default/Fallback
         "session_pattern": FWSL_SESSION_PATTERN,
@@ -217,7 +213,7 @@ LEAGUE_CONFIG = {
         "position_groups": FWSL_POSITION_GROUPS,
     },
     "upl": {
-        "name": "Uganda Premier League",
+        "name": "Premier League",
         "clubs_by_season": UPL_CLUBS_BY_SEASON,
         "clubs": UPL_CLUBS, # Default/Fallback
         "session_pattern": UPL_SESSION_PATTERN,

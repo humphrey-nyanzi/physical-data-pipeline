@@ -2,7 +2,7 @@
 """
 Match Analysis Unified CLI
 ==========================
-Single entry point for all FUFA analysis pipelines.
+Single entry point for all analysis pipelines.
 
 Usage:
     python scripts/match_analysis.py <command> [options]
@@ -50,7 +50,7 @@ register_pipeline(SeasonPipeline)
 
 def main():
     parser = argparse.ArgumentParser(
-        description="FUFA Match Analysis CLI",
+        description="Match Analysis CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -72,7 +72,7 @@ def main():
     # Print help when called with no args
     if len(sys.argv) == 1:
         Console.banner(
-            "FUFA Match Analysis",
+            "Match Analysis",
             "Unified pipeline entry-point  ·  python scripts/match_analysis.py <command>",
         )
         parser.print_help()
@@ -93,7 +93,7 @@ def main():
     if season:
         subtitle += f"  ·  Season: {season}"
 
-    Console.banner("FUFA Match Analysis", subtitle)
+    Console.banner("Match Analysis", subtitle)
 
     # ── Execute pipeline ──────────────────────────────────────────────────────
     if args.command not in PIPELINE_REGISTRY:

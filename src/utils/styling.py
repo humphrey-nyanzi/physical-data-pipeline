@@ -262,11 +262,11 @@ def format_club_name(club: str, uppercase: bool = False) -> str:
         str: Formatted club name
 
     Example:
-        >>> format_club_name('KCCA FC')
-        'Kcca Fc'
+        >>> format_club_name('Capital FC')
+        'Capital Fc'
 
-        >>> format_club_name('KCCA FC', uppercase=True)
-        'KCCA FC'
+        >>> format_club_name('Capital FC', uppercase=True)
+        'CAPITAL FC'
     """
     if uppercase:
         return club.upper()

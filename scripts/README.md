@@ -1,6 +1,6 @@
 # Match Analysis Scripts
 
-This directory contains the unified command-line interface (CLI) for the FUFA Match Analysis platform.
+This directory contains the unified command-line interface (CLI) for the Match Analysis platform.
 
 ## Unified CLI: `match_analysis.py`
 
@@ -19,17 +19,17 @@ python scripts/match_analysis.py <command> [options]
 Executes the complete 4-phase workflow: Configuration → Data Cleaning → Analysis → Report Generation
 
 ```bash
-python scripts/match_analysis.py full --league upl --input data/raw/all_catapult_data_16_Jul_25.csv --output Output/
+python scripts/match_analysis.py full --league upl --input data/raw/raw_tracking_data.csv --output Output/
 ```
 
-This is the primary way to process raw Catapult data end-to-end and generate club reports.
+This is the primary way to process raw GPS tracking data end-to-end and generate club reports.
 
 #### 2. Season Report (`season`)
 
 Generates full season analysis and individual club reports.
 
 ```bash
-python scripts/match_analysis.py season --league upl --input data/raw/all_catapult_data_16_Jul_25.csv
+python scripts/match_analysis.py season --league upl --input data/raw/raw_tracking_data.csv
 ```
 
 #### 3. Weekly Report (`weekly`)
@@ -70,6 +70,5 @@ python scripts/match_analysis.py full --league upl --input data.csv
 Standalone scripts like `run_full_analysis.py`, `generate_reports.py`, etc., have been **deprecated and removed**. Their functionality is now fully integrated into the `match_analysis.py` tool via the `src/pipelines/` module.
 
 ---
-**Organization:** FUFA-RST
 **Last Updated:** February 19, 2026
 **Migration Status:** Legacy orchestrator scheduled for removal after CLI deprecation period

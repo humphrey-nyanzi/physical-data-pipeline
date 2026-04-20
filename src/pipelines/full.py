@@ -54,7 +54,7 @@ class FullPipeline(AnalysisPipeline):
             "--input",
             required=True,
             type=Path,
-            help="Path to raw Catapult CSV input file"
+            help="Path to raw GPS tracking CSV input file"
         )
         parser.add_argument(
             "--output",

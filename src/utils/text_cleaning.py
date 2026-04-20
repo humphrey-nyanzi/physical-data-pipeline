@@ -29,8 +29,8 @@ def clean_text(s: str) -> str:
         str: Cleaned text string, or original if null
 
     Example:
-        >>> clean_text("  kampala  queens  fc  ")
-        'Kampala Queens Fc'
+        >>> clean_text("  phoenix  fc  ")
+        'Phoenix Fc'
     """
     if pd.isnull(s):
         return s
@@ -62,8 +62,8 @@ def normalize_name(name: str) -> str:
         str: Normalized name (letters only)
 
     Example:
-        >>> normalize_name("Kampala Queens F.C.")
-        'kampalaqueens'
+        >>> normalize_name("Phoenix F.C.")
+        'phoenix'
 
         >>> normalize_name("SC Villa")
         'villa'
@@ -148,10 +148,10 @@ def normalize_club_names(
 
     Example:
         >>> df = pd.DataFrame({
-        ...     'club_for': ['Kampala Queens', 'Kcca Fc'],
-        ...     'club_against': ['She Maroons', 'Vipers']
+        ...     'club_for': ['Phoenix FC', 'Capital Fc'],
+        ...     'club_against': ['Valkyrie FC', 'Cobras SC']
         ... })
-        >>> clubs = ['Kampala Queens FC', 'KCCA FC', 'She Maroons FC', 'Vipers SC']
+        >>> clubs = ['Phoenix FC', 'Capital FC', 'Valkyrie FC', 'Cobras SC']
         >>> normalize_club_names(df, ['club_for', 'club_against'], clubs)
     """
     df = df.copy()
@@ -228,11 +228,11 @@ def fix_player_name_format(name: str) -> str:
         str: Fixed player name string
 
     Example:
-        >>> fix_player_name_format('John Doe - KCCA FC_CM')
-        'John Doe - KCCA FC - CM'
+        >>> fix_player_name_format('John Doe - Capital FC_CM')
+        'John Doe - Capital FC - CM'
 
-        >>> fix_player_name_format('Jane Smith - Kampala Queens FC - FW')
-        'Jane Smith - Kampala Queens FC - FW'  # Already correct
+        >>> fix_player_name_format('Jane Smith - Phoenix FC - FW')
+        'Jane Smith - Phoenix FC - FW'  # Already correct
     """
     if re.fullmatch(r".+ - .+_.+", name):
         return re.sub(r"(.+ - .+?)_(.+)", r"\1 - \2", name)
@@ -259,8 +259,8 @@ def extract_player_info(
     Example:
         >>> df = pd.DataFrame({
         ...     'player_name': [
-        ...         'John Doe - KCCA FC - CM',
-        ...         'Jane Smith - Kampala Queens FC - FW'
+        ...         'John Doe - Capital FC - CM',
+        ...         'Jane Smith - Phoenix FC - FW'
         ...     ]
         ... })
         >>> df_clean, player_cols = extract_player_info(df)

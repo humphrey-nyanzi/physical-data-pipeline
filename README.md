@@ -1,6 +1,6 @@
-# Match-Analysis: Uganda Football Data Analytics Platform
+# Match-Analysis: Football Performance Analytics Platform
 
-A comprehensive data analysis and reporting platform for Catapult match data from Uganda's top-flight football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific and league-wide analysis reports.
+A comprehensive data analysis and reporting platform for GPS tracking match data from professional football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific and league-wide analysis reports.
 
 ---
 
@@ -16,7 +16,7 @@ A comprehensive data analysis and reporting platform for Catapult match data fro
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/fufa-rst/Match-Analysis.git
+   git clone https://github.com/your-username/Match-Analysis.git
    cd Match-Analysis
    ```
 
@@ -62,7 +62,7 @@ Runs Config → Clean → Analyze → Report end-to-end for a given league.
 ```bash
 python scripts/match_analysis.py full \
   --league upl \
-  --input data/raw/24_25_season_raw_catapult_data.csv \
+  --input data/raw/raw_tracking_data.csv \
   --season 2024/25
 
 # Options:
@@ -78,19 +78,19 @@ Focused season or half-season reporting with full club-level detail.
 ```bash
 python scripts/match_analysis.py season \
   --league fwsl \
-  --input data/raw/24_25_season_raw_catapult_data.csv \
+  --input data/raw/raw_tracking_data.csv \
   --season 2024/25 \
   --timeframe half_season
 
 # Options:
 #   --gk                  Generate additional goalkeeper reports
-#   --skip-cleaning       Use a pre-processed CSV (skip cleaning step)
+#   --skip-cleaning       Skip the data cleaning step (use pre-processed CSV)
 #   --skip-club-reports   Skip individual club DOCX files
 ```
 
 ### `weekly` — Matchday GPS Report
 
-Processes individual-matchday Catapult CSV exports from `data/matchday_csvs/` and generates a single-matchday GPS report.
+Processes individual-matchday GPS CSV exports from `data/matchday_csvs/` and generates a single-matchday GPS report.
 
 ```bash
 python scripts/match_analysis.py weekly \
@@ -122,7 +122,7 @@ python scripts/match_analysis.py <command> --help
 
 ```
 📥 INPUT
-└── data/raw/<catapult_export>.csv
+└── data/raw/<gps_export>.csv
         │
         ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -201,7 +201,7 @@ python scripts/match_analysis.py <command> --help
                          ▼
   📄 Output/<Season>/<League>/Full/<Run_ID>/02_club_reports/
      └── {LEAGUE}_{Season}_Full_Club_{ClubName}_Report_{run_id}.docx
-              (one file per club · e.g. UPL_2024-25_Full_Club_KCCA FC_Report_….docx)
+               (one file per club · e.g. UPL_2024-25_Full_Club_Capital FC_Report_….docx)
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  PHASE 4b · League-Wide Report  (src/reporting/)                │
@@ -238,7 +238,7 @@ Functionally equivalent to `full` but with more explicit stage control (e.g. `--
 
 ```
 📥 INPUT
-└── data/raw/<catapult_export>.csv   (or pre-processed CSV with --skip-cleaning)
+└── data/raw/<gps_export>.csv   (or pre-processed CSV with --skip-cleaning)
         │
         ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -315,7 +315,7 @@ Processes one matchday at a time from individual club-uploaded CSV files.
 
 ```
 📥 INPUT
-└── data/matchday_csvs/*.csv     (raw per-club Catapult exports, not prefixed PROCESSED_)
+└── data/matchday_csvs/*.csv     (raw per-club GPS exports, not prefixed PROCESSED_)
         │
         ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -381,7 +381,7 @@ Processes one matchday at a time from individual club-uploaded CSV files.
 Match-Analysis/
 │
 ├── data/
-│   ├── raw/                    # Raw Catapult CSV exports (input)
+│   ├── raw/                    # Raw GPS tracking CSV exports (input)
 │   ├── matchday_csvs/          # Per-matchday club uploads (weekly pipeline)
 │   ├── processed/              # Cleaned CSVs (output of cleaning step)
 │   │   ├── UPL25_matches_clean.csv
@@ -497,7 +497,7 @@ Match-Analysis/
 | `duration` | float | Minutes played |
 | `distance_km` | float | Total distance (km) |
 | `sprint_distance_m` | float | Sprint distance (m) |
-| `player_load` | float | Catapult Player Load score |
+| `player_load` | float | Player Load score |
 | `top_speed_kmh` | float | Peak speed (km/h) |
 | `total_accelerations` | int | Summed acceleration zone counts |
 | `total_decelerations` | int | Summed deceleration zone counts |
@@ -584,27 +584,27 @@ df_half = filter_data_by_timeframe(
 ```python
 from src.utils.text_cleaning import best_match
 
-canonical = best_match("Solitilo Bright Stars", official_clubs, min_score=0.5)
-# → "Soltilo Bright Stars FC"
+canonical = best_match("Brite Stars", official_clubs, min_score=0.5)
+# → "Bright Stars FC"
 ```
 
 ---
 
 ## 📚 League Information
 
-### FWSL (FUFA Women's Super League)
+### FWSL (Women's Super League)
 
 **Season:** 2024-2025 · **Teams (12):**
 
-Amus College WFC · Kawempe Muslim LFC · Kampala Queens FC · Lady Doves FC · Makerere University WFC · Olila HS WFC · Rines SS WFC · She Corporates FC · She Maroons FC · Uganda Martyrs Lubaga WFC · Wakiso Hill WFC
+College WFC · Crescent LFC · Phoenix FC · Lady Hawks FC · University WFC · Academy HS WFC · Sterling SS WFC · Corporate FC · Valkyrie FC · Heritage WFC · Hillside WFC
 
 Session title format: `WMd<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
-### UPL (Uganda Premier League)
+### UPL (Premier League)
 
 **Season:** 2024-2025 · **Teams (16):**
 
-BUL FC · KCCA FC · SC Villa · Vipers SC · Express FC · Kitara FC · Lugazi FC · Maroons FC · Mbale Heroes FC · Mbarara City FC · NEC FC · Police FC · Soltilo Bright Stars FC · UPDF FC · URA FC · Wakiso Giants FC
+Forge FC · Capital FC · SC Villa · Cobras SC · Express FC · Shield FC · Industrial FC · Garrison FC · Mountain Heroes FC · Western City FC · Central FC · Army FC · Bright Stars FC · Revenue FC · Eastern FC · Lakeside Giants FC
 
 Session title format: `Md<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
@@ -617,8 +617,8 @@ Session title format: `Md<N> - <TeamA> - <TeamB> - <Location> - League - <Result
 The most common cause is the session-title filter. Check that your raw CSV session titles match the expected format:
 
 ```
-# FWSL: WMd01 - Amus College WFC - Kawempe Muslim LFC - Home - League - Win
-# UPL:  Md12 - KCCA FC - BUL FC - Away - League - Draw
+# FWSL: WMd01 - Phoenix FC - Crescent LFC - Home - League - Win
+# UPL:  Md12 - Capital FC - Forge FC - Away - League - Draw
 ```
 
 Adjust the pattern in `src/config/league_definitions.py → get_league_session_pattern()` if needed.
@@ -687,9 +687,9 @@ df_recent = cleaned_df[cleaned_df["match_day"].str.extract(r"(\d+)")[0].astype(i
 
 ## 📝 License & Attribution
 
-**Data Source:** Catapult Sports tracking data  
-**Leagues:** FWSL (Uganda Women's Football Super League), UPL (Uganda Premier League)  
-**Organisation:** FUFA-RST (Federation of Uganda Football Associations — Research, Science & Technology)
+**Data Source:** GPS tracking data  
+**Leagues:** FWSL (Women's Super League), UPL (Premier League)  
+**Author:** Performance Analytics Team
 
 ---
 

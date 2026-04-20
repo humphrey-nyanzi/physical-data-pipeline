@@ -28,7 +28,7 @@ class WeeklyPipeline(AnalysisPipeline):
         """Register arguments for weekly report."""
         parser.add_argument("--md", type=int, required=True, help="Matchday Number (e.g., 12)")
         parser.add_argument("--input", type=Path, default=Path("data/matchday_csvs"), 
-                           help="Input directory containing Catapult CSVs")
+                           help="Input directory containing GPS tracking CSVs")
         parser.add_argument("--output", type=Path, default=Path("Output/Weekly"), 
                            help="Output directory for reports")
         parser.add_argument("--season", default="2025/2026", help="Season string (e.g., 2025/2026)")

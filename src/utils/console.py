@@ -1,5 +1,5 @@
 """
-console.py – Pretty terminal output for the FUFA Match Analysis CLI.
+console.py – Pretty terminal output for the Match Analysis CLI.
 
 Uses raw ANSI escape codes (no external dependencies) so it works on
 any modern terminal (Windows 10+, macOS, Linux, VS Code integrated
@@ -8,7 +8,7 @@ terminal).
 Usage
 -----
     from src.utils.console import Console, PipelineFormatter
-    Console.banner("FUFA Match Analysis")
+    Console.banner("Match Analysis")
     Console.section("Phase 1: Data Cleaning")
     Console.success("Pipeline complete  –  1 204 rows written")
     Console.warning("3 rows dropped (invalid split_name)")
@@ -32,20 +32,22 @@ import os
 if sys.platform == "win32":
     os.system("")  # Activates VT processing on legacy cmd.exe
 
+
 def _is_utf8():
     """Check if stdout supports UTF-8 characters."""
     encoding = sys.stdout.encoding or "ascii"
     return "utf-8" in encoding.lower()
+
 
 _BOX = {
     "TL": "╔" if _is_utf8() else "+",
     "TR": "╗" if _is_utf8() else "+",
     "BL": "╚" if _is_utf8() else "+",
     "BR": "╝" if _is_utf8() else "+",
-    "H":  "═" if _is_utf8() else "=",
-    "V":  "║" if _is_utf8() else "|",
-    "h":  "─" if _is_utf8() else "-",
-    "v":  "│" if _is_utf8() else "|",
+    "H": "═" if _is_utf8() else "=",
+    "V": "║" if _is_utf8() else "|",
+    "h": "─" if _is_utf8() else "-",
+    "v": "│" if _is_utf8() else "|",
     "sTL": "┌" if _is_utf8() else "+",
     "sTR": "┐" if _is_utf8() else "+",
     "sBL": "└" if _is_utf8() else "+",
@@ -61,41 +63,44 @@ _BOX = {
     "ellipsis": "…" if _is_utf8() else "...",
 }
 
+
 class _A:  # Namespace for ANSI codes
-    RESET   = "\033[0m"
-    BOLD    = "\033[1m"
-    DIM     = "\033[2m"
-    ITALIC  = "\033[3m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    ITALIC = "\033[3m"
 
     # Foreground colours
-    BLACK   = "\033[30m"
-    RED     = "\033[31m"
-    GREEN   = "\033[32m"
-    YELLOW  = "\033[33m"
-    BLUE    = "\033[34m"
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
     MAGENTA = "\033[35m"
-    CYAN    = "\033[36m"
-    WHITE   = "\033[37m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
 
     # Bright foreground
-    BRED    = "\033[91m"
-    BGREEN  = "\033[92m"
+    BRED = "\033[91m"
+    BGREEN = "\033[92m"
     BYELLOW = "\033[93m"
-    BBLUE   = "\033[94m"
-    BMAGENTA= "\033[95m"
-    BCYAN   = "\033[96m"
-    BWHITE  = "\033[97m"
+    BBLUE = "\033[94m"
+    BMAGENTA = "\033[95m"
+    BCYAN = "\033[96m"
+    BWHITE = "\033[97m"
 
     # Background
-    BG_BLACK  = "\033[40m"
-    BG_BLUE   = "\033[44m"
-    BG_CYAN   = "\033[46m"
+    BG_BLACK = "\033[40m"
+    BG_BLUE = "\033[44m"
+    BG_CYAN = "\033[46m"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
 _WIDTH = 72  # Total banner/divider width
+
 
 def _paint(*parts) -> str:
     """Join ANSI fragments and reset at the end."""
@@ -109,6 +114,7 @@ def _print(text: str, *, file=sys.stdout):
 # ──────────────────────────────────────────────────────────────────────────────
 # Public Console API
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class Console:
     """Static helpers for structured, colourful terminal output."""
@@ -129,11 +135,33 @@ class Console:
         lines = [
             "",
             _paint(_A.BOLD, _A.BBLUE, _BOX["TL"], pad, _BOX["TR"]),
-            _paint(_A.BOLD, _A.BBLUE, _BOX["V"], _A.BWHITE, _A.BOLD, inner, _A.RESET, _A.BOLD, _A.BBLUE, _BOX["V"]),
+            _paint(
+                _A.BOLD,
+                _A.BBLUE,
+                _BOX["V"],
+                _A.BWHITE,
+                _A.BOLD,
+                inner,
+                _A.RESET,
+                _A.BOLD,
+                _A.BBLUE,
+                _BOX["V"],
+            ),
         ]
         if subtitle:
             sub_inner = subtitle.center(_WIDTH)
-            lines.append(_paint(_A.BBLUE, _BOX["V"], _A.DIM, _A.CYAN, sub_inner, _A.RESET, _A.BBLUE, _BOX["V"]))
+            lines.append(
+                _paint(
+                    _A.BBLUE,
+                    _BOX["V"],
+                    _A.DIM,
+                    _A.CYAN,
+                    sub_inner,
+                    _A.RESET,
+                    _A.BBLUE,
+                    _BOX["V"],
+                )
+            )
         lines += [
             _paint(_A.BOLD, _A.BBLUE, _BOX["BL"], pad, _BOX["BR"]),
             "",
@@ -146,7 +174,14 @@ class Console:
         bar = _BOX["h"] * (_WIDTH - len(title) - 3)
         _print(
             "\n"
-            + _paint(_A.BOLD, _A.BCYAN, _BOX["sTL"] + _BOX["h"] + f" {title} ", _A.DIM, _A.CYAN, bar)
+            + _paint(
+                _A.BOLD,
+                _A.BCYAN,
+                _BOX["sTL"] + _BOX["h"] + f" {title} ",
+                _A.DIM,
+                _A.CYAN,
+                bar,
+            )
         )
 
     @staticmethod
@@ -210,27 +245,34 @@ class Console:
         if dropped == 0:
             return
         pct = (dropped / total * 100) if total else 0
-        arrow  = _paint(_A.BYELLOW, f"  {_BOX['arrow']}")
-        label  = _paint(_A.BYELLOW, f" [{step}]")
-        count  = _paint(_A.BOLD, _A.BYELLOW, f" {dropped:,} rows removed")
+        arrow = _paint(_A.BYELLOW, f"  {_BOX['arrow']}")
+        label = _paint(_A.BYELLOW, f" [{step}]")
+        count = _paint(_A.BOLD, _A.BYELLOW, f" {dropped:,} rows removed")
         detail = _paint(_A.DIM, f"  ({pct:.1f}% of {total:,})")
-        reason_str = _paint(_A.DIM, _A.CYAN, f"  {_BOX['arrow']} {reason}") if reason else ""
+        reason_str = (
+            _paint(_A.DIM, _A.CYAN, f"  {_BOX['arrow']} {reason}") if reason else ""
+        )
         _print(f"{arrow}{label}{count}{detail}{reason_str}", file=sys.stderr)
 
     @staticmethod
     def saved(label: str, path: str):
         """Print a 'file saved' confirmation line."""
-        icon  = _paint(_A.BGREEN, f"  {_BOX['save']}")
-        lbl   = _paint(_A.DIM, _A.WHITE, f" {label}:")
-        p     = _paint(_A.BCYAN, f" {path}")
+        icon = _paint(_A.BGREEN, f"  {_BOX['save']}")
+        lbl = _paint(_A.DIM, _A.WHITE, f" {label}:")
+        p = _paint(_A.BCYAN, f" {path}")
         _print(f"{icon}{lbl}{p}")
 
     @staticmethod
     def tag(text: str, color: str = "cyan"):
         """Inline coloured tag, returned as string (not printed)."""
-        c = {"cyan": _A.BCYAN, "green": _A.BGREEN,
-             "yellow": _A.BYELLOW, "red": _A.BRED,
-             "blue": _A.BBLUE, "magenta": _A.BMAGENTA}.get(color, _A.BCYAN)
+        c = {
+            "cyan": _A.BCYAN,
+            "green": _A.BGREEN,
+            "yellow": _A.BYELLOW,
+            "red": _A.BRED,
+            "blue": _A.BBLUE,
+            "magenta": _A.BMAGENTA,
+        }.get(color, _A.BCYAN)
         return _paint(c, _A.BOLD, f"[{text}]")
 
     @staticmethod
@@ -240,7 +282,20 @@ class Console:
         msg = f"  {name.upper()} PIPELINE COMPLETE  {_BOX['bullet']}  {rows_out:,} rows output  "
         _print("")
         _print(_paint(_A.BOLD, _A.BGREEN, _BOX["TL"], pad, _BOX["TR"]))
-        _print(_paint(_A.BOLD, _A.BGREEN, _BOX["V"], _A.BWHITE, _A.BOLD, msg.center(_WIDTH), _A.RESET, _A.BOLD, _A.BGREEN, _BOX["V"]))
+        _print(
+            _paint(
+                _A.BOLD,
+                _A.BGREEN,
+                _BOX["V"],
+                _A.BWHITE,
+                _A.BOLD,
+                msg.center(_WIDTH),
+                _A.RESET,
+                _A.BOLD,
+                _A.BGREEN,
+                _BOX["V"],
+            )
+        )
         _print(_paint(_A.BOLD, _A.BGREEN, _BOX["BL"], pad, _BOX["BR"]))
         _print("")
 
@@ -251,22 +306,49 @@ class Console:
         msg = f"  {name.upper()} PIPELINE FAILED  "
         _print("")
         _print(_paint(_A.BOLD, _A.BRED, _BOX["TL"], pad, _BOX["TR"]), file=sys.stderr)
-        _print(_paint(_A.BOLD, _A.BRED, _BOX["V"], _A.BWHITE, _A.BOLD, msg.center(_WIDTH), _A.RESET, _A.BOLD, _A.BRED, _BOX["V"]), file=sys.stderr)
+        _print(
+            _paint(
+                _A.BOLD,
+                _A.BRED,
+                _BOX["V"],
+                _A.BWHITE,
+                _A.BOLD,
+                msg.center(_WIDTH),
+                _A.RESET,
+                _A.BOLD,
+                _A.BRED,
+                _BOX["V"],
+            ),
+            file=sys.stderr,
+        )
         if reason:
             r = f"  Reason: {reason}  "
-            _print(_paint(_A.BRED, _BOX["V"], _A.DIM, _A.WHITE, r.center(_WIDTH), _A.RESET, _A.BRED, _BOX["V"]), file=sys.stderr)
+            _print(
+                _paint(
+                    _A.BRED,
+                    _BOX["V"],
+                    _A.DIM,
+                    _A.WHITE,
+                    r.center(_WIDTH),
+                    _A.RESET,
+                    _A.BRED,
+                    _BOX["V"],
+                ),
+                file=sys.stderr,
+            )
         _print(_paint(_A.BOLD, _A.BRED, _BOX["BL"], pad, _BOX["BR"]), file=sys.stderr)
         _print("")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Logging Formatter  (drop-in replacement for basicConfig)
 # ──────────────────────────────────────────────────────────────────────────────
 
 _LEVEL_STYLES = {
-    logging.DEBUG:    (_A.DIM,    f"{_BOX['bullet']}  DEBUG  {_BOX['bullet']}"),
-    logging.INFO:     (_A.BBLUE,  "  INFO   "),
-    logging.WARNING:  (_A.BYELLOW,f"{_BOX['warning']}  WARN   "),
-    logging.ERROR:    (_A.BRED,   f"{_BOX['error']}  ERROR  "),
+    logging.DEBUG: (_A.DIM, f"{_BOX['bullet']}  DEBUG  {_BOX['bullet']}"),
+    logging.INFO: (_A.BBLUE, "  INFO   "),
+    logging.WARNING: (_A.BYELLOW, f"{_BOX['warning']}  WARN   "),
+    logging.ERROR: (_A.BRED, f"{_BOX['error']}  ERROR  "),
     logging.CRITICAL: (_A.BRED + _A.BOLD, "!!  CRIT   "),
 }
 

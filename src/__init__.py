@@ -1,8 +1,8 @@
 """
-FUFA Match Analysis - Football Performance Analytics Pipeline
+Match Analysis - Football Performance Analytics Pipeline
 
-A comprehensive data pipeline for analyzing Catapult GPS/IMU tracking data
-from Uganda Football Federation (FUFA) league matches.
+A comprehensive data pipeline for analyzing GPS/IMU tracking data
+from professional football league matches.
 
 Modules:
     config: League definitions, constants, and configuration management
@@ -13,7 +13,7 @@ Modules:
 """
 
 __version__ = "0.1.0"
-__author__ = "FUFA Research & Statistics Team"
+__author__ = "Performance Analytics Team"
 
 from . import config
 from . import utils

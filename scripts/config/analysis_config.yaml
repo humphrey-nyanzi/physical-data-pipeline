@@ -1,10 +1,10 @@
-# FUFA Match-Analysis Configuration
+# Match-Analysis Configuration
 # Configuration file for league-specific settings and analysis parameters
 
 # League Configuration
 leagues:
   upl:
-    name: "Uganda Premier League"
+    name: "Premier League"
     abbreviation: "UPL"
     clubs: 16
     max_matchdays: 30
@@ -13,7 +13,7 @@ leagues:
     data_quality_threshold: 0.85
 
   fwsl:
-    name: "Finance Trust Women Super League"
+    name: "Women's Super League"
     abbreviation: "FWSL"
     clubs: 12
     max_matchdays: 22
