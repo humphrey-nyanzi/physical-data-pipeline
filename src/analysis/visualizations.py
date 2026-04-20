@@ -221,7 +221,7 @@ def style_table_for_docs(
 
 def plot_matchdays_per_club(
     matchdays_df: pd.DataFrame,
-    league: str = "fwsl",
+    league: str = "womens_league",
     figsize: Tuple[int, int] = (12, 6),
 ) -> None:
     """Plot bar chart of matchdays analysed per club with creative brand styling.

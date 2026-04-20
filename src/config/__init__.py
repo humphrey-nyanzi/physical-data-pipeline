@@ -5,8 +5,8 @@ Exposes league definitions, constants, and configuration utilities.
 """
 
 from .league_definitions import (
-    FWSL_CLUBS,
-    UPL_CLUBS,
+    WOMENS_LEAGUE_CLUBS,
+    MENS_LEAGUE_CLUBS,
     LEAGUE_CONFIG,
     get_league_clubs,
     get_league_session_pattern,
@@ -29,8 +29,8 @@ from .constants import (
     MIN_SESSION_DISTANCE_KM,
     OUTLIER_IQR_MULTIPLIER,
     SPARSE_COLUMN_THRESHOLD,
-    CLUB_CORRECTIONS_FWSL,
-    CLUB_CORRECTIONS_UPL,
+    CLUB_CORRECTIONS_WOMENS,
+    CLUB_CORRECTIONS_MENS,
     SUMMARY_STATISTICS,
     METRIC_DISPLAY_NAMES,
     get_merge_keys,
@@ -67,8 +67,8 @@ def analysis_config(reload: bool = False) -> Dict[str, Any]:
 
 __all__ = [
     # League definitions
-    "FWSL_CLUBS",
-    "UPL_CLUBS",
+    "WOMENS_LEAGUE_CLUBS",
+    "MENS_LEAGUE_CLUBS",
     "LEAGUE_CONFIG",
     "get_league_clubs",
     "get_league_session_pattern",
@@ -89,8 +89,8 @@ __all__ = [
     "MIN_SESSION_DISTANCE_KM",
     "OUTLIER_IQR_MULTIPLIER",
     "SPARSE_COLUMN_THRESHOLD",
-    "CLUB_CORRECTIONS_FWSL",
-    "CLUB_CORRECTIONS_UPL",
+    "CLUB_CORRECTIONS_WOMENS",
+    "CLUB_CORRECTIONS_MENS",
     "SUMMARY_STATISTICS",
     "METRIC_DISPLAY_NAMES",
     "get_merge_keys",

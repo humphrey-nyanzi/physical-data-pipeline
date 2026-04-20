@@ -32,7 +32,7 @@ class WeeklyPipeline(AnalysisPipeline):
         parser.add_argument("--output", type=Path, default=Path("Output/Weekly"), 
                            help="Output directory for reports")
         parser.add_argument("--season", default="2025/2026", help="Season string (e.g., 2025/2026)")
-        parser.add_argument("--league", default="upl", choices=["upl", "fwsl"], help="League (upl or fwsl)")
+        parser.add_argument("--league", default="mens_league", choices=["mens_league", "womens_league"], help="League (mens_league or womens_league)")
         parser.add_argument("--gk", action="store_true", help="Generate additional goalkeeper report")
 
     def validate_args(self) -> bool:

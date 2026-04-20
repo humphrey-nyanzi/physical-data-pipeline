@@ -3,18 +3,18 @@
 
 # League Configuration
 leagues:
-  upl:
+  mens_league:
     name: "Premier League"
-    abbreviation: "UPL"
+    abbreviation: "ML"
     clubs: 16
     max_matchdays: 30
     min_players_per_match: 5
     expected_players_per_club: 23
     data_quality_threshold: 0.85
 
-  fwsl:
+  womens_league:
     name: "Women's Super League"
-    abbreviation: "FWSL"
+    abbreviation: "WL"
     clubs: 12
     max_matchdays: 22
     min_players_per_match: 4
@@ -61,8 +61,8 @@ reporting:
 # Season Report Configuration
 season_report:
   half_season_matchday:
-    upl: 15
-    fwsl: 11
+    mens_league: 15
+    womens_league: 11
 
   visualization:
     theme: "professional" # Options: default, professional

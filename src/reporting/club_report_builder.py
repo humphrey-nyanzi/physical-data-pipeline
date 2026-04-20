@@ -75,8 +75,8 @@ class ClubReportBuilder:
         self.matchday_order = matchday_order
         self.include_gk = include_gk
         
-        # Determine half-season mark for trend charts (UPL: 15, FWSL: 11)
-        self.half_md = 15 if league.lower() == "upl" else 11
+        # Determine half-season mark for trend charts (mens_league: 15, womens_league: 11)
+        self.half_md = 15 if league.lower() == "mens_league" else 11
 
     def build(self) -> str:
         """Execute the full report generation sequence."""

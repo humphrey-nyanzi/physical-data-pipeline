@@ -6,7 +6,7 @@ from .document_generation import add_table_of_contents
 import pandas as pd
 
 class WeeklyGPSReportBuilder:
-    def __init__(self, matchday_number, season="2025/2026", gk_mode=False, league="upl"):
+    def __init__(self, matchday_number, season="2025/2026", gk_mode=False, league="mens_league"):
         self.matchday_number = matchday_number
         self.season = season
         self.gk_mode = gk_mode
@@ -33,14 +33,14 @@ class WeeklyGPSReportBuilder:
 
     def _add_title(self):
         report_type = "GOALKEEPER" if self.gk_mode else "PHYSICAL PERFORMANCE (GPS)"
-        league_name = "PREMIER LEAGUE" if self.league.lower() == "upl" else "WOMEN'S SUPER LEAGUE"
+        league_name = "PREMIER LEAGUE" if self.league.lower() == "mens_league" else "WOMEN'S SUPER LEAGUE"
         title_text = f"GPS {report_type} REPORT FOR {league_name} {self.season} MATCHDAY {self.matchday_number}"
         self.doc.add_paragraph(title_text, style='Title')
         self.doc.add_page_break()
 
     def _add_introduction(self):
         self.doc.add_heading("1. Introduction", level=1)
-        league_full_name = "Premier League" if self.league.lower() == "upl" else "Women's Super League"
+        league_full_name = "Premier League" if self.league.lower() == "mens_league" else "Women's Super League"
         self.doc.add_paragraph(
             f"This report provides a detailed analysis of the physical performance data captured via GPS tracking technology "
             f"during Matchday {self.matchday_number} of the {league_full_name} {self.season} season."

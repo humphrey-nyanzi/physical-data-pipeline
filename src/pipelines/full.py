@@ -47,8 +47,8 @@ class FullPipeline(AnalysisPipeline):
         parser.add_argument(
             "--league",
             required=True,
-            choices=["upl", "fwsl"],
-            help="League identifier (upl or fwsl)"
+            choices=["mens_league", "womens_league"],
+            help="League identifier (mens_league or womens_league)"
         )
         parser.add_argument(
             "--input",
@@ -95,7 +95,7 @@ class FullPipeline(AnalysisPipeline):
             self.log(f"Input file not found: {self.args.input}", logging.ERROR)
             return False
         
-        if self.args.league.lower() not in ["upl", "fwsl"]:
+        if self.args.league.lower() not in ["mens_league", "womens_league"]:
             self.log(f"Invalid league: {self.args.league}", logging.ERROR)
             return False
         
@@ -187,7 +187,7 @@ class FullPipeline(AnalysisPipeline):
         Load league configuration.
         
         Args:
-            league: 'upl' or 'fwsl'
+            league: 'mens_league' or 'womens_league'
             
         Returns:
             League configuration dictionary

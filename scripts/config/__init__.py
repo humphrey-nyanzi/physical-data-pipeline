@@ -45,7 +45,7 @@ class ConfigManager:
         """Get configuration value by dot-notation key.
 
         Examples:
-            config.get('leagues.upl.clubs')  # Returns 16
+            config.get('leagues.mens_league.clubs')  # Returns 16
             config.get('analysis.min_distance_km')  # Returns 2.0
         """
         keys = key.split(".")
@@ -65,7 +65,7 @@ class ConfigManager:
         """Get complete configuration for a league.
 
         Args:
-            league: League identifier ('upl' or 'fwsl')
+            league: League identifier ('mens_league' or 'womens_league')
 
         Returns:
             Dictionary with league configuration

@@ -1,8 +1,8 @@
 """
 Unified analysis module for Match-Analysis.
 
-Provides core analytical functions for both FWSL and UPL leagues, encapsulating
-logic from `analysis_FWSL_2025.ipynb` and `analysis_UPL_2025.ipynb`.
+Provides core analytical functions for both Women's and Men's leagues, encapsulating
+logic from legacy analysis notebooks.
 
 The module separates data loading, metric computation, aggregation, and
 visualization into reusable functions that can be called independently or
@@ -25,16 +25,16 @@ def load_processed_data(league: str, data_dir: str = "./") -> pd.DataFrame:
     """Load cleaned processed data from CSV.
 
     Args:
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
         data_dir (str): Directory containing processed CSVs
 
     Returns:
         pd.DataFrame: Loaded data
     """
     filename = (
-        constants.FWSL_PROCESSED_OUTPUT
-        if league.lower() == "fwsl"
-        else constants.UPL_PROCESSED_OUTPUT
+        constants.WOMENS_LEAGUE_PROCESSED_OUTPUT
+        if league.lower() == "womens_league"
+        else constants.MENS_LEAGUE_PROCESSED_OUTPUT
     )
     path = f"{data_dir}/{filename}"
     return pd.read_csv(path)
@@ -45,17 +45,17 @@ def normalize_match_day_format(df: pd.DataFrame, league: str) -> pd.DataFrame:
 
     Args:
         df (pd.DataFrame): DataFrame with match_day column
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
 
     Returns:
         pd.DataFrame: DataFrame with normalized match_day column
     """
     df = df.copy()
     if "match_day" in df.columns:
-        if league.lower() == "fwsl":
+        if league.lower() == "womens_league":
             # Replace 'Wmd' prefix with 'MD'
             df["match_day"] = df["match_day"].str.replace("Wmd", "MD")
-        elif league.lower() == "upl":
+        elif league.lower() == "mens_league":
             # Keep 'Md' but standardize to 'MD'
             df["match_day"] = df["match_day"].str.replace("Md", "MD")
     return df
@@ -179,7 +179,7 @@ def club_coverage_analysis(df: pd.DataFrame, league: str) -> pd.DataFrame:
 
     Args:
         df (pd.DataFrame): Processed data
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
 
     Returns:
         pd.DataFrame: Columns [club_for, Uploaded, Analysed, Pending, Not Uploaded]
@@ -210,7 +210,7 @@ def club_coverage_analysis(df: pd.DataFrame, league: str) -> pd.DataFrame:
         result["Uploaded Matchdays"] - result["Analysed Matchdays"]
     ).clip(lower=0)
 
-    max_days = 22  # Standard FWSL matchdays
+    max_days = 22  # Standard Women's League matchdays
     result["Not Uploaded"] = (max_days - result["Uploaded Matchdays"]).clip(lower=0)
 
     return result.sort_values("Analysed Matchdays", ascending=False)
@@ -450,7 +450,7 @@ def full_analysis_summary(league: str, data_dir: str = "./") -> Dict:
     """Run complete analysis and return all summaries.
 
     Args:
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
         data_dir (str): Directory with processed data
 
     Returns:

@@ -15,7 +15,7 @@ Training rows are saved to::
 
     data/training/<season>/<league>/<LEAGUE>_<season>_training_data.csv
 
-e.g.  data/training/2024-25/UPL/UPL_2024-25_training_data.csv
+e.g.  data/training/2024-25/MENS_LEAGUE/MENS_LEAGUE_2024-25_training_data.csv
 """
 
 from typing import List, Optional, Tuple
@@ -239,7 +239,7 @@ def extract_and_save_training_data(
     Output path:
         data/training/<season>/<league>/<LEAGUE>_<season>_training_data.csv
 
-    e.g.  data/training/2024-25/UPL/UPL_2024-25_training_data.csv
+    e.g.  data/training/2024-25/MENS_LEAGUE/MENS_LEAGUE_2024-25_training_data.csv
     """
     df = df.copy()
 
@@ -254,7 +254,7 @@ def extract_and_save_training_data(
     training_df = df[df["_clean_tag"] == "training"].drop(columns=["_clean_tag"]).copy()
 
     if len(training_df) > 0:
-        # Build a season-organised path, e.g. data/training/2024-25/UPL/
+        # Build a season-organised path, e.g. data/training/2024-25/MENS_LEAGUE/
         season_str = season.replace("/", "-") if season else "unknown_season"
         league_str = league.upper()
 
@@ -519,22 +519,22 @@ def extract_player_columns(
     df, player_cols = text_cleaning.extract_player_info(df, player_name_column="player_name")
     df = pd.concat([df, player_cols], axis=1)
 
-    if league and league.lower() == "upl":
+    if league and league.lower() == "mens_league":
         missing_positions = {
-            "Saidi Mayanja":        "CM",
-            "Ashraf Mugume":        "CM",
-            "Musitafa Mujuzi":      "CB",
-            "Bright Anukani":       "AM",
-            "Kiza Arafat":          "AM",
-            "Joel Sserunjogi":      "DM",
-            "Katenga Etienne Openga": "LW",
-            "Hassan Muhamud":       "CB",
-            "Derrick Paul":         "LW",
-            "Emmanuel Anyama":      "CF",
-            "Abubaker Mayanja":     "CF",
-            "Isa Mibiru":           "LB",
-            "Julius Poloto":        "MD",
-            "Peter Magambo":        "DM",
+            "Player_01":        "CM",
+            "Player_02":        "CM",
+            "Player_03":      "CB",
+            "Player_04":       "AM",
+            "Player_05":          "AM",
+            "Player_06":      "DM",
+            "Player_07": "LW",
+            "Player_08":       "CB",
+            "Player_09":         "LW",
+            "Player_10":      "CF",
+            "Player_11":     "CF",
+            "Player_12":           "LB",
+            "Player_13":        "MD",
+            "Player_14":        "DM",
         }
         mask = df["player_position"] == "None"
         df.loc[mask, "player_position"] = (
@@ -583,10 +583,10 @@ def normalize_clubs(
     clubs = league_definitions.get_league_clubs(league, season)
 
     corrections = None
-    if league.lower() == "fwsl":
-        corrections = constants.CLUB_CORRECTIONS_FWSL
-    elif league.lower() == "upl":
-        corrections = constants.CLUB_CORRECTIONS_UPL
+    if league.lower() == "womens_league":
+        corrections = constants.CLUB_CORRECTIONS_WOMENS
+    elif league.lower() == "mens_league":
+        corrections = constants.CLUB_CORRECTIONS_MENS
 
     def resolve_club(name, club_list, corrections_map):
         if pd.isna(name):
@@ -922,9 +922,9 @@ def save_processed(df: pd.DataFrame, league: str, out_dir: str = None) -> str:
     os.makedirs(out_dir, exist_ok=True)
 
     fname = (
-        constants.FWSL_PROCESSED_OUTPUT
-        if league.lower() == "fwsl"
-        else constants.UPL_PROCESSED_OUTPUT
+        constants.WOMENS_LEAGUE_PROCESSED_OUTPUT
+        if league.lower() == "womens_league"
+        else constants.MENS_LEAGUE_PROCESSED_OUTPUT
     )
     path = os.path.join(out_dir, fname)
     df.to_csv(path, index=False)
@@ -938,7 +938,7 @@ def save_processed(df: pd.DataFrame, league: str, out_dir: str = None) -> str:
 
 def clean_pipeline(
     raw_path: Optional[str] = None,
-    league: str = "fwsl",
+    league: str = "womens_league",
     season: str = "2025/2026",
     include_gk: bool = False,
     run_id: str = "",

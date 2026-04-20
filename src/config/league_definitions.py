@@ -7,10 +7,10 @@ and normalization across the codebase.
 """
 
 # ============================================================================
-# FWSL (Women's Super League) - Women's Top Tier
+# WOMENS_LEAGUE (Women's Super League) - Women's Top Tier
 # ============================================================================
 
-FWSL_CLUBS_BY_SEASON = {
+WOMENS_LEAGUE_CLUBS_BY_SEASON = {
     "2024/2025": [
         "Phoenix FC", "Valkyrie FC", "University WFC",
         "Heritage WFC", "Crescent LFC", "Hillside WFC",
@@ -26,21 +26,21 @@ FWSL_CLUBS_BY_SEASON = {
 }
 
 # Legacy fallback
-FWSL_CLUBS = FWSL_CLUBS_BY_SEASON["2025/2026"]
+WOMENS_LEAGUE_CLUBS = WOMENS_LEAGUE_CLUBS_BY_SEASON["2025/2026"]
 
-FWSL_SESSION_PATTERN = r"^W?md\s*\d+\s*-.*"
+WOMENS_LEAGUE_SESSION_PATTERN = r"^W?md\s*\d+\s*-.*"
 """
-Expected FWSL session title format: 'Wmd{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
+Expected WOMENS_LEAGUE session title format: 'Wmd{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
 Example: 'Wmd1-Phoenix Fc-Academy HS WFC-Home-League-Win'
 """
 
-FWSL_USAGE_TIER_THRESHOLDS = {
+WOMENS_LEAGUE_USAGE_TIER_THRESHOLDS = {
     "high": 18,  # ≥18 match days = high engagement (blue)
     "medium": 13,  # 13-17 match days = medium engagement (orange)
     "low": 0,  # <13 match days = low engagement (red)
 }
 
-FWSL_UPLOADED_MATCHES = {
+WOMENS_LEAGUE_UPLOADED_MATCHES = {
     "Valkyrie FC": 20,
     "Crescent LFC": 22,
     "Heritage WFC": 18,
@@ -56,17 +56,17 @@ FWSL_UPLOADED_MATCHES = {
 }
 
 # ============================================================================
-# UPL (Premier League) - Men's Top Tier
+# MENS_LEAGUE (Premier League) - Men's Top Tier
 # ============================================================================
 
-UPL_CLUBS_BY_SEASON = {
+MENS_LEAGUE_CLUBS_BY_SEASON = {
     "2024/2025": [
-        "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Express FC", "SC Villa",
-        "Garrison FC", "Lakeside Giants FC", "Bright Stars FC", "Shield FC",
+        "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Rapid FC", "Metro SC",
+        "Garrison FC", "Lakeside Giants FC", "Shining Stars FC", "Shield FC",
         "Army FC", "Eastern FC", "Western City FC", "Central FC", "Industrial FC", "Mountain Heroes FC"
     ],
     "2025/2026": [
-         "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Express FC", "SC Villa",
+         "Capital FC", "Forge FC", "Revenue FC", "Cobras SC", "Rapid FC", "Metro SC",
         "Garrison FC", "United Saints FC", "Calvary FC", "Shield FC",
         "Army FC", "Eastern FC", "Western City FC", "Central FC", "Industrial FC", "Laketown FC"
         
@@ -74,15 +74,15 @@ UPL_CLUBS_BY_SEASON = {
 }
 
 # Legacy fallback
-UPL_CLUBS = UPL_CLUBS_BY_SEASON["2025/2026"]
+MENS_LEAGUE_CLUBS = MENS_LEAGUE_CLUBS_BY_SEASON["2025/2026"]
 
-UPL_SESSION_PATTERN = r"^Md\s*\d+\s*-.*"
+MENS_LEAGUE_SESSION_PATTERN = r"^Md\s*\d+\s*-.*"
 """
-Expected UPL session title format: 'Md{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
+Expected MENS_LEAGUE session title format: 'Md{N}-{Club1}-{Club2}-{Location}-{League}-{Result}'
 Example: 'Md1-Capital Fc-Revenue Fc-Home-League-Win'
 """
 
-UPL_USAGE_TIER_THRESHOLDS = {
+MENS_LEAGUE_USAGE_TIER_THRESHOLDS = {
     "high": 25,  # ≥25 match days = high engagement (blue)
     "medium": 18,  # 18-24 match days = medium engagement (orange)
     "low": 0,  # <18 match days = low engagement (red)
@@ -140,10 +140,10 @@ POSITION_ALIASES = {
 }
 
 # ============================================================================
-# FWSL-specific Position Groups (plural form)
+# WOMENS_LEAGUE-specific Position Groups (plural form)
 # ============================================================================
 
-FWSL_POSITION_GROUPS = {
+WOMENS_LEAGUE_POSITION_GROUPS = {
     "defenders": ["cb", "lb", "rb", "df", "cd", "dc", "lcb"],
     "midfielders": ["mf", "cm", "am", "dmc", "amc", "mc", "md"],
     "forwards": ["fw", "fwd", "rw", "lw", "cf", "mfwd", "dfwd", "fwdw", "fwdwd", "cfwd"],
@@ -151,10 +151,10 @@ FWSL_POSITION_GROUPS = {
 }
 
 # ============================================================================
-# UPL-specific Position Groups (singular form)
+# MENS_LEAGUE-specific Position Groups (singular form)
 # ============================================================================
 
-UPL_POSITION_GROUPS = {
+MENS_LEAGUE_POSITION_GROUPS = {
     "defender": [
         "df",
         "rb",
@@ -176,10 +176,10 @@ UPL_POSITION_GROUPS = {
 }
 
 # ============================================================================
-# UPL-specific Missing Position Mapping (manual fixes for incomplete data)
+# MENS_LEAGUE-specific Missing Position Mapping (manual fixes for incomplete data)
 # ============================================================================
 
-UPL_MISSING_POSITIONS = {
+MENS_LEAGUE_MISSING_POSITIONS = {
     "Player_01": "CM",
     "Player_02": "CM",
     "Player_03": "CB",
@@ -201,28 +201,28 @@ UPL_MISSING_POSITIONS = {
 # ============================================================================
 
 LEAGUE_CONFIG = {
-    "fwsl": {
+    "womens_league": {
         "name": "Women's Super League",
-        "clubs_by_season": FWSL_CLUBS_BY_SEASON,
-        "clubs": FWSL_CLUBS, # Default/Fallback
-        "session_pattern": FWSL_SESSION_PATTERN,
+        "clubs_by_season": WOMENS_LEAGUE_CLUBS_BY_SEASON,
+        "clubs": WOMENS_LEAGUE_CLUBS, # Default/Fallback
+        "session_pattern": WOMENS_LEAGUE_SESSION_PATTERN,
         "session_prefix": "Wmd",
         "max_matchdays": 22,
-        "usage_tiers": FWSL_USAGE_TIER_THRESHOLDS,
-        "uploaded_matches": FWSL_UPLOADED_MATCHES,
-        "position_groups": FWSL_POSITION_GROUPS,
+        "usage_tiers": WOMENS_LEAGUE_USAGE_TIER_THRESHOLDS,
+        "uploaded_matches": WOMENS_LEAGUE_UPLOADED_MATCHES,
+        "position_groups": WOMENS_LEAGUE_POSITION_GROUPS,
     },
-    "upl": {
+    "mens_league": {
         "name": "Premier League",
-        "clubs_by_season": UPL_CLUBS_BY_SEASON,
-        "clubs": UPL_CLUBS, # Default/Fallback
-        "session_pattern": UPL_SESSION_PATTERN,
-        "session_prefix": "Md",
-        "max_matchdays": 30,  # UPL typically has more matchdays
-        "usage_tiers": UPL_USAGE_TIER_THRESHOLDS,
+        "clubs_by_season": MENS_LEAGUE_CLUBS_BY_SEASON,
+        "clubs": MENS_LEAGUE_CLUBS, # Default/Fallback
+        "session_pattern": MENS_LEAGUE_SESSION_PATTERN,
+        "pattern": MENS_LEAGUE_SESSION_PATTERN,
+        "max_matchdays": 30,  # MENS_LEAGUE typically has more matchdays
+        "usage_tiers": MENS_LEAGUE_USAGE_TIER_THRESHOLDS,
         "uploaded_matches": {},  # Not defined in current data
-        "position_groups": UPL_POSITION_GROUPS,
-        "missing_positions": UPL_MISSING_POSITIONS,
+        "position_groups": MENS_LEAGUE_POSITION_GROUPS,
+        "missing_positions": MENS_LEAGUE_MISSING_POSITIONS,
     },
 }
 
@@ -257,7 +257,7 @@ def get_league_clubs(league: str, season: str = "2025/2026") -> list:
     Get the list of standard club names for a given league and season.
 
     Args:
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
         season (str): Season identifier (e.g., '2025/2026'). Default '2025/2026'.
 
     Returns:
@@ -288,7 +288,7 @@ def get_league_session_pattern(league: str) -> str:
     Get the regex pattern for valid session titles in a given league.
 
     Args:
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
 
     Returns:
         str: Regex pattern string
@@ -309,7 +309,7 @@ def get_league_config(league: str) -> dict:
     Get the complete configuration dictionary for a given league.
 
     Args:
-        league (str): League identifier ('fwsl' or 'upl')
+        league (str): League identifier ('womens_league' or 'mens_league')
 
     Returns:
         dict: League configuration dictionary

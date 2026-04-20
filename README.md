@@ -1,6 +1,6 @@
 # Match-Analysis: Football Performance Analytics Platform
 
-A comprehensive data analysis and reporting platform for GPS tracking match data from professional football leagues (FWSL and UPL). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific and league-wide analysis reports.
+A comprehensive data analysis and reporting platform for GPS tracking match data from professional football leagues (Women's League and Men's League). This tool automates the cleaning, analysis, and reporting of player performance metrics to generate insightful club-specific and league-wide analysis reports.
 
 ---
 
@@ -161,8 +161,8 @@ python scripts/match_analysis.py <command> --help
             ┌────────────┴───────────────┐
             ▼                            ▼
   📄 data/processed/                📄 Output/<Season>/<League>/Full/<Run_ID>/
-     UPL25_matches_clean.csv           01_cleaned/
-     FWSL25_matches_clean.csv          └── {LEAGUE}_{Season}_Full_Cleaned_{run_id}.csv
+     mens_league_matches_clean.csv       01_cleaned/
+     womens_league_matches_clean.csv      └── {LEAGUE}_{Season}_Full_Cleaned_{run_id}.csv
      {LEAGUE}_training_data.csv        (reference copy for this run)
             │
             ▼
@@ -201,7 +201,7 @@ python scripts/match_analysis.py <command> --help
                          ▼
   📄 Output/<Season>/<League>/Full/<Run_ID>/02_club_reports/
      └── {LEAGUE}_{Season}_Full_Club_{ClubName}_Report_{run_id}.docx
-               (one file per club · e.g. UPL_2024-25_Full_Club_Capital FC_Report_….docx)
+               (one file per club · e.g. ML_2024-25_Full_Club_Capital FC_Report_….docx)
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  PHASE 4b · League-Wide Report  (src/reporting/)                │
@@ -253,7 +253,7 @@ Functionally equivalent to `full` but with more explicit stage control (e.g. `--
             ┌────────────┴──────────────┐
             ▼                           ▼
   📄 data/processed/              📄 Output/<Season>/<League>/Season/<Run_ID>/
-     UPL25_matches_clean.csv          01_cleaned/
+     mens_league_matches_clean.csv      01_cleaned/
      {LEAGUE}_training_data.csv       └── {LEAGUE}_{Season}_Season_Cleaned_{run_id}.csv
             │
             ▼
@@ -384,8 +384,8 @@ Match-Analysis/
 │   ├── raw/                    # Raw GPS tracking CSV exports (input)
 │   ├── matchday_csvs/          # Per-matchday club uploads (weekly pipeline)
 │   ├── processed/              # Cleaned CSVs (output of cleaning step)
-│   │   ├── UPL25_matches_clean.csv
-│   │   ├── FWSL25_matches_clean.csv
+│   │   ├── mens_league_matches_clean.csv
+│   │   ├── womens_league_matches_clean.csv
 │   │   └── {LEAGUE}_training_data.csv
 │   └── external/               # External reference data
 │
@@ -464,8 +464,8 @@ Match-Analysis/
 
 | Output File | Produced By | Location |
 |---|---|---|
-| `UPL25_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
-| `FWSL25_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
+| `mens_league_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
+| `womens_league_matches_clean.csv` | `clean_pipeline()` | `data/processed/` |
 | `{LEAGUE}_training_data.csv` | `extract_and_save_training_data()` | `data/processed/` |
 | `{LEAGUE}_…_Full_Cleaned_….csv` | `FullPipeline._phase_2_cleaning()` | `Output/…/Full/<Run>/01_cleaned/` |
 | `{LEAGUE}_…_Full_Club_{Club}_Report_….docx` | `ClubReportBuilder.build()` | `Output/…/Full/<Run>/02_club_reports/` |
@@ -522,8 +522,8 @@ Match-Analysis/
 | Minimum match distance | `src/config/constants.py` | `MIN_SESSION_DISTANCE_KM` |
 | Outlier detection sensitivity | `src/config/constants.py` | `OUTLIER_IQR_MULTIPLIER` |
 | Sparse column threshold | `src/config/constants.py` | `SPARSE_COLUMN_THRESHOLD` |
-| Club name corrections (FWSL) | `src/config/constants.py` | `CLUB_CORRECTIONS_FWSL` |
-| Club name corrections (UPL) | `src/config/constants.py` | `CLUB_CORRECTIONS_UPL` |
+| Club name corrections (Women's) | `src/config/constants.py` | `CLUB_CORRECTIONS_WOMENS` |
+| Club name corrections (Men's) | `src/config/constants.py` | `CLUB_CORRECTIONS_MENS` |
 | Half-season cutoff matchday | `scripts/config/analysis_config.yaml` | `season_report.half_season_matchday` |
 | Official club roster | `src/config/league_definitions.py` | `LEAGUE_CONFIG[league]['clubs']` |
 | Position mapping | `src/config/league_definitions.py` | `POSITION_MAPPING`, `POSITION_ALIASES` |
@@ -585,14 +585,14 @@ df_half = filter_data_by_timeframe(
 from src.utils.text_cleaning import best_match
 
 canonical = best_match("Brite Stars", official_clubs, min_score=0.5)
-# → "Bright Stars FC"
+# → "Shining Stars FC"
 ```
 
 ---
 
 ## 📚 League Information
 
-### FWSL (Women's Super League)
+### Women's League
 
 **Season:** 2024-2025 · **Teams (12):**
 
@@ -600,11 +600,11 @@ College WFC · Crescent LFC · Phoenix FC · Lady Hawks FC · University WFC · 
 
 Session title format: `WMd<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
-### UPL (Premier League)
+### Men's League
 
 **Season:** 2024-2025 · **Teams (16):**
 
-Forge FC · Capital FC · SC Villa · Cobras SC · Express FC · Shield FC · Industrial FC · Garrison FC · Mountain Heroes FC · Western City FC · Central FC · Army FC · Bright Stars FC · Revenue FC · Eastern FC · Lakeside Giants FC
+Forge FC · Capital FC · Metro SC · Cobras SC · Rapid FC · Shield FC · Industrial FC · Garrison FC · Mountain Heroes FC · Western City FC · Central FC · Army FC · Shining Stars FC · Revenue FC · Eastern FC · Lakeside Giants FC
 
 Session title format: `Md<N> - <TeamA> - <TeamB> - <Location> - League - <Result>`
 
@@ -617,8 +617,8 @@ Session title format: `Md<N> - <TeamA> - <TeamB> - <Location> - League - <Result
 The most common cause is the session-title filter. Check that your raw CSV session titles match the expected format:
 
 ```
-# FWSL: WMd01 - Phoenix FC - Crescent LFC - Home - League - Win
-# UPL:  Md12 - Capital FC - Forge FC - Away - League - Draw
+# Women's League: WMd01 - Phoenix FC - Crescent LFC - Home - League - Win
+# Men's League:  Md12 - Capital FC - Forge FC - Away - League - Draw
 ```
 
 Adjust the pattern in `src/config/league_definitions.py → get_league_session_pattern()` if needed.
@@ -628,7 +628,7 @@ Adjust the pattern in `src/config/league_definitions.py → get_league_session_p
 Add a manual correction in `src/config/constants.py`:
 
 ```python
-CLUB_CORRECTIONS_UPL = {
+CLUB_CORRECTIONS_MENS = {
     "Typo Name": "Correct Canonical Name",
 }
 ```
@@ -688,7 +688,7 @@ df_recent = cleaned_df[cleaned_df["match_day"].str.extract(r"(\d+)")[0].astype(i
 ## 📝 License & Attribution
 
 **Data Source:** GPS tracking data  
-**Leagues:** FWSL (Women's Super League), UPL (Premier League)  
+**Leagues:** Women's League, Men's League  
 **Author:** Performance Analytics Team
 
 ---

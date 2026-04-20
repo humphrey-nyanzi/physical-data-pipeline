@@ -77,3 +77,7 @@ anonymisation_mapping.json
 
 # Anonymisation: Institutional logo asset (remove before release)
 src/reporting/assets/fufa_logo.png
+
+#logs
+logs/**/*.log 
+logs/**/*.csv

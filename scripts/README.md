@@ -19,7 +19,7 @@ python scripts/match_analysis.py <command> [options]
 Executes the complete 4-phase workflow: Configuration → Data Cleaning → Analysis → Report Generation
 
 ```bash
-python scripts/match_analysis.py full --league upl --input data/raw/raw_tracking_data.csv --output Output/
+python scripts/match_analysis.py full --league mens_league --input data/raw/raw_tracking_data.csv --output Output/
 ```
 
 This is the primary way to process raw GPS tracking data end-to-end and generate club reports.
@@ -29,7 +29,7 @@ This is the primary way to process raw GPS tracking data end-to-end and generate
 Generates full season analysis and individual club reports.
 
 ```bash
-python scripts/match_analysis.py season --league upl --input data/raw/raw_tracking_data.csv
+python scripts/match_analysis.py season --league mens_league --input data/raw/raw_tracking_data.csv
 ```
 
 #### 3. Weekly Report (`weekly`)
@@ -56,13 +56,13 @@ python scripts/match_analysis.py weekly --help
 ```python
 # Old way - DEPRECATED
 from src.pipeline.orchestrator import PipelineExecutor
-executor = PipelineExecutor(league='upl')
+executor = PipelineExecutor(league='mens_league')
 executor.execute_full_pipeline('data.csv', 'output/')
 ```
 
 Use the CLI instead:
 ```bash
-python scripts/match_analysis.py full --league upl --input data.csv
+python scripts/match_analysis.py full --league mens_league --input data.csv
 ```
 
 ## Legacy Scripts

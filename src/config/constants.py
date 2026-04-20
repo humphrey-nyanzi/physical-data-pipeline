@@ -173,12 +173,12 @@ RAW_DATA_FILE = "./data/raw/raw_tracking_data.csv"
 # Processed data output paths
 PROCESSED_DATA_DIR = "./data/processed/"
 OUTPUT_REPORTS_DIR = "./reports/"
-OUTPUT_REPORTS_FWSL_DIR = "./reports/FWSL/"
-OUTPUT_REPORTS_UPL_DIR = "./reports/UPL/"
+OUTPUT_REPORTS_WOMENS_DIR = "./reports/womens_league/"
+OUTPUT_REPORTS_MENS_DIR = "./reports/mens_league/"
 
 # Processed CSV output naming
-FWSL_PROCESSED_OUTPUT = "FWSL25_matches_clean.csv"
-UPL_PROCESSED_OUTPUT = "UPL25_matches_clean.csv"
+WOMENS_LEAGUE_PROCESSED_OUTPUT = "womens_league_matches_clean.csv"
+MENS_LEAGUE_PROCESSED_OUTPUT = "mens_league_matches_clean.csv"
 
 # ============================================================================
 # Column Rename Mappings (for display in reports)
@@ -235,7 +235,7 @@ SUMMARY_STATISTICS_INTENSITY = ["max", "mean", "std"]
 # ============================================================================
 
 # Club name normalization rules
-CLUB_CORRECTIONS_FWSL = {
+CLUB_CORRECTIONS_WOMENS = {
     "Heritage Hs": "Heritage WFC",
     "Heritage'S Hs": "Heritage WFC",
     "Heritge": "Heritage WFC",
@@ -245,12 +245,12 @@ CLUB_CORRECTIONS_FWSL = {
     "Corprate": "Corporate FC",
 }
 
-# Club name normalization rules for UPL
-CLUB_CORRECTIONS_UPL = {
-    "Brite Stars": "Bright Stars FC",
-    "Brght Stars": "Bright Stars FC",
-    "Brite": "Bright Stars FC",
-    "Briht": "Bright Stars FC",
+# Club name normalization rules for Men's League
+CLUB_CORRECTIONS_MENS = {
+    "Shinning Stars": "Shining Stars FC",
+    "Shning Stars": "Shining Stars FC",
+    "Shinng": "Shining Stars FC",
+    "Shinin": "Shining Stars FC",
     "Industral": "Industrial FC",
 }
 

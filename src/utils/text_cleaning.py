@@ -65,7 +65,7 @@ def normalize_name(name: str) -> str:
         >>> normalize_name("Phoenix F.C.")
         'phoenix'
 
-        >>> normalize_name("SC Villa")
+        >>> normalize_name("Metro SC")
         'villa'
     """
     name = name.lower()
