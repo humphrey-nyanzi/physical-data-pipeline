@@ -200,6 +200,20 @@ MENS_LEAGUE_MISSING_POSITIONS = {
 # League Configuration Dictionaries (for programmatic access)
 # ============================================================================
 
+import os
+import importlib
+
+PROFILE_NAME = os.getenv("MATCH_ANALYSIS_PROFILE", "generic").lower()
+if PROFILE_NAME != "generic":
+    try:
+        profile = importlib.import_module(f"src.config.profiles.{PROFILE_NAME}_profile")
+        WOMENS_LEAGUE_CLUBS_BY_SEASON = getattr(profile, "WOMENS_LEAGUE_CLUBS_BY_SEASON", WOMENS_LEAGUE_CLUBS_BY_SEASON)
+        WOMENS_LEAGUE_CLUBS = WOMENS_LEAGUE_CLUBS_BY_SEASON.get("2025/2026", [])
+        MENS_LEAGUE_CLUBS_BY_SEASON = getattr(profile, "MENS_LEAGUE_CLUBS_BY_SEASON", MENS_LEAGUE_CLUBS_BY_SEASON)
+        MENS_LEAGUE_CLUBS = MENS_LEAGUE_CLUBS_BY_SEASON.get("2025/2026", [])
+    except ImportError as e:
+        print(f"Warning: Could not load profile '{PROFILE_NAME}': {e}")
+
 LEAGUE_CONFIG = {
     "womens_league": {
         "name": "Women's Super League",

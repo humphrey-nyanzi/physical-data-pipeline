@@ -24,6 +24,7 @@ import re
 import pandas as pd
 import numpy as np
 import logging
+import hashlib
 
 from ..config import constants, league_definitions
 from ..utils import text_cleaning
@@ -572,6 +573,23 @@ def extract_player_columns(
     return df
 
 
+def anonymize_players(df: pd.DataFrame) -> pd.DataFrame:
+    """Anonymize player names when running in the 'generic' profile."""
+    profile = os.getenv("MATCH_ANALYSIS_PROFILE", "generic").lower()
+    if profile == "generic" and "p_name" in df.columns:
+        df = df.copy()
+        
+        def _hash_name(name):
+            if pd.isna(name):
+                return name
+            h = hashlib.md5(str(name).encode()).hexdigest()[:6]
+            return f"Player_{h.upper()}"
+            
+        df["p_name"] = df["p_name"].apply(_hash_name)
+        logger.info("Anonymized player names using deterministic hashing (generic profile active).")
+    return df
+
+
 def normalize_clubs(
     df: pd.DataFrame,
     league: str,
@@ -1018,6 +1036,7 @@ def clean_pipeline(
 
     # 9. Extract player columns
     df = extract_player_columns(df, league=league, rejection_log=rlog)
+    df = anonymize_players(df)
 
     # 10. Normalize clubs
     df = normalize_clubs(df, league, season, rejection_log=rlog)

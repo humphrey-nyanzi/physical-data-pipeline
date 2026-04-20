@@ -1,16 +1,1 @@
-run_id,timestamp,pipeline,league,season,status,input_file,output_dir
-20260302_125907,2026-03-02T12:59:07.982743,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_125907
-20260302_130551,2026-03-02T13:05:51.589544,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_130551
-20260302_131048,2026-03-02T13:10:48.513247,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_131048
-20260302_131625,2026-03-02T13:16:25.912208,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_131625
-20260302_132006,2026-03-02T13:20:06.966299,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_132006
-20260302_133335,2026-03-02T13:33:35.895553,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_133335
-20260302_150112,2026-03-02T15:01:12.900897,full,UPL,2024/25,failed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_150112
-20260302_151051,2026-03-02T15:10:51.615993,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260302_151051
-20260310_130205,2026-03-10T13:02:05.022404,full,UPL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\UPL\Full\20260310_130205
-20260310_131009,2026-03-10T13:10:09.301356,full,FWSL,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\2024-25\FWSL\Full\20260310_131009
-20260310_132001,2026-03-10T13:20:01.128011,full,UPL,2025/26,completed,data\raw\UPL25_26_midseason_raw_catapult_data.csv,Output\2025-26\UPL\Full\20260310_132001
-20260310_133010,2026-03-10T13:30:10.315263,full,FWSL,2025/26,failed,data\raw\FWSL25_26_midseason_raw_catapult_data.csv,Output\2025-26\FWSL\Full\20260310_133010
-20260310_134244,2026-03-10T13:42:44.085874,full,FWSL,2025/26,failed,data\raw\FWSL25_26_midseason_raw_catapult_data.csv,Output\2025-26\FWSL\Full\20260310_134244
-20260310_135223,2026-03-10T13:52:23.573277,full,FWSL,2025/26,completed,data\raw\FWSL25_26_midseason_raw_catapult_data.csv,Output\2025-26\FWSL\Full\20260310_135223
-20260310_135608,2026-03-10T13:56:08.129564,full,FWSL,2025/26,completed,data\raw\FWSL25_26_midseason_raw_catapult_data.csv,Output\2025-26\FWSL\Full\20260310_135608
+20260420_152657,2026-04-20T15:26:57.006118,season,MENS_LEAGUE,2024/25,completed,data\raw\24_25_season_raw_catapult_data.csv,Output\Season\2024-25\MENS_LEAGUE\Season\20260420_152657

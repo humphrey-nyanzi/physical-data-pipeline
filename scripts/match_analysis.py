@@ -18,6 +18,13 @@ import argparse
 import logging
 from typing import Dict, Type
 
+try:
+    from dotenv import load_dotenv
+    # Load .env file automatically
+    load_dotenv()
+except ImportError:
+    pass
+
 # Add project root to path BEFORE other local imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

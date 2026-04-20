@@ -69,13 +69,14 @@ class SeasonReportBuilder:
         
         # 1. Title Page
         assets_dir = Path(__file__).parent / "assets"
-        base_title = f"{self.league.upper()} {self.timeframe.replace('_', ' ').title()} Report"
+        display_league = constants.MENS_LEAGUE_NAME if self.league.lower() == "mens_league" else constants.WOMENS_LEAGUE_NAME
+        base_title = f"{display_league} {self.timeframe.replace('_', ' ').title()} Report"
         display_title = f"Goalkeeper {base_title}" if self.gk_mode else base_title
         
         doc_gen.add_title_page(
             self.doc, 
             title=display_title,
-            subtitle=f"{self.league} | {self.season} Season",
+            subtitle=f"{display_league} | {self.season} Season",
             logo_path=None
         )
         
@@ -107,8 +108,9 @@ class SeasonReportBuilder:
 
 
     def _add_intro_section(self):
+        display_league = constants.MENS_LEAGUE_NAME if self.league.lower() == "mens_league" else constants.WOMENS_LEAGUE_NAME
         self.doc.add_paragraph(
-            f"This report presents a comprehensive analysis of the {self.league.upper()} "
+            f"This report presents a comprehensive analysis of the {display_league} "
             f"competitions for the {self.season} {self.timeframe.replace('_', ' ')}. "
             "The data collected via wearable GPS tracking technology provides insights into the physical demands "
             "and performance characteristics of the league."

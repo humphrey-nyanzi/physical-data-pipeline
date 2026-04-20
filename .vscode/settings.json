@@ -1,8 +1,0 @@
-{
-    "workbench.editorAssociations": {
-        "*.copilotmd": "vscode.markdown.preview.editor",
-        "*.ipynb": "jupyter-notebook",
-        "*.jpg": "imagePreview.previewEditor",
-        "file:/**/*.csv": "jupyter-data-wrangler"
-    }
-}

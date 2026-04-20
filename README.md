@@ -61,7 +61,7 @@ Runs Config → Clean → Analyze → Report end-to-end for a given league.
 
 ```bash
 python scripts/match_analysis.py full \
-  --league upl \
+  --league mens_league \
   --input data/raw/raw_tracking_data.csv \
   --season 2024/25
 
@@ -77,7 +77,7 @@ Focused season or half-season reporting with full club-level detail.
 
 ```bash
 python scripts/match_analysis.py season \
-  --league fwsl \
+  --league womens_league \
   --input data/raw/raw_tracking_data.csv \
   --season 2024/25 \
   --timeframe half_season
@@ -95,7 +95,7 @@ Processes individual-matchday GPS CSV exports from `data/matchday_csvs/` and gen
 ```bash
 python scripts/match_analysis.py weekly \
   --md 12 \
-  --league upl \
+  --league mens_league \
   --season 2025/2026
 
 # Options:
@@ -555,7 +555,7 @@ from src.data.cleaning import clean_pipeline
 
 cleaned_df, output_path = clean_pipeline(
     raw_path="data/raw/my_export.csv",
-    league="upl",
+    league="mens_league",
     season="2024/25"
 )
 ```
@@ -575,7 +575,7 @@ from src.data.cleaning import (
 from src.analysis.season_analysis import filter_data_by_timeframe
 
 df_half = filter_data_by_timeframe(
-    df, timeframe="half_season", league="upl", half_season_md=15
+    df, timeframe="half_season", league="mens_league", half_season_md=15
 )
 ```
 
@@ -651,7 +651,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 ```python
 # Process one league at a time
-cleaned_df, _ = clean_pipeline(raw_path="...", league="fwsl", season="2024/25")
+cleaned_df, _ = clean_pipeline(raw_path="...", league="womens_league", season="2024/25")
 
 # Filter by date range after cleaning
 df_recent = cleaned_df[cleaned_df["match_day"].str.extract(r"(\d+)")[0].astype(int) >= 10]

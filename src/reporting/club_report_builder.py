@@ -91,10 +91,11 @@ class ClubReportBuilder:
         
         # 3. Add Front Matter
         # Note: logo_path is optional; set to None or provide a custom logo path.
+        display_league = constants.MENS_LEAGUE_NAME if self.league.lower() == "mens_league" else constants.WOMENS_LEAGUE_NAME
         add_title_page(
             doc, 
             title=f"Performance Analysis Report: {self.club}",
-            subtitle=f"{self.league} | {self.season} Season",
+            subtitle=f"{display_league} | {self.season} Season",
             logo_path=None
         )
         

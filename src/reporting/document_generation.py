@@ -21,6 +21,7 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.section import WD_ORIENT, WD_SECTION
 from src.config.speed_zones import get_speed_zones
+from src.config import constants
 
 
 from docx.oxml import OxmlElement
@@ -475,10 +476,10 @@ def add_conclusion_section(doc: Document, season: str = "2025/26") -> None:
     doc.add_heading("Conclusion", level=1)
     doc.add_paragraph(
         """We extend our sincere thanks to every coach, performance staff member and analyst for their dedication in collecting and interpreting GPS tracking data during the {} season. Your hard work has laid a solid foundation for evidence-based decision-making across fitness, recovery and match preparation.
-    """.format(season) + """
+    """.format(season) + f"""
 All tracking outputs and associated player information will be handled in strict accordance with the data privacy and security policy, ensuring confidentiality, ethical use and compliant storage. This protocol safeguards both individual rights and the integrity of our performance analysis.
 
-As we move into the next season, we look forward to your feedback and stand ready to support your club through the performance analytics team. You can reach us via email at analytics@example.com
+As we move into the next season, we look forward to your feedback and stand ready to support your club through the performance analytics team. You can reach us via email at {constants.CONTACT_EMAIL}
         """
     )
 

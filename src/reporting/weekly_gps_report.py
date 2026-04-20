@@ -33,14 +33,16 @@ class WeeklyGPSReportBuilder:
 
     def _add_title(self):
         report_type = "GOALKEEPER" if self.gk_mode else "PHYSICAL PERFORMANCE (GPS)"
-        league_name = "PREMIER LEAGUE" if self.league.lower() == "mens_league" else "WOMEN'S SUPER LEAGUE"
+        from src.config import constants
+        league_name = constants.MENS_LEAGUE_NAME.upper() if self.league.lower() == "mens_league" else constants.WOMENS_LEAGUE_NAME.upper()
         title_text = f"GPS {report_type} REPORT FOR {league_name} {self.season} MATCHDAY {self.matchday_number}"
         self.doc.add_paragraph(title_text, style='Title')
         self.doc.add_page_break()
 
     def _add_introduction(self):
         self.doc.add_heading("1. Introduction", level=1)
-        league_full_name = "Premier League" if self.league.lower() == "mens_league" else "Women's Super League"
+        from src.config import constants
+        league_full_name = constants.MENS_LEAGUE_NAME if self.league.lower() == "mens_league" else constants.WOMENS_LEAGUE_NAME
         self.doc.add_paragraph(
             f"This report provides a detailed analysis of the physical performance data captured via GPS tracking technology "
             f"during Matchday {self.matchday_number} of the {league_full_name} {self.season} season."

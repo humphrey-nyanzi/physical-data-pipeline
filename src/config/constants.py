@@ -258,6 +258,26 @@ CLUB_CORRECTIONS_MENS = {
 # Configuration Dictionaries
 # ============================================================================
 
+import os
+import importlib
+
+PROFILE_NAME = os.getenv("MATCH_ANALYSIS_PROFILE", "generic").lower()
+
+MENS_LEAGUE_NAME = "Men's League"
+WOMENS_LEAGUE_NAME = "Women's League"
+CONTACT_EMAIL = "analytics@example.com"
+
+if PROFILE_NAME != "generic":
+    try:
+        profile = importlib.import_module(f"src.config.profiles.{PROFILE_NAME}_profile")
+        CLUB_CORRECTIONS_WOMENS = getattr(profile, "CLUB_CORRECTIONS_WOMENS", CLUB_CORRECTIONS_WOMENS)
+        CLUB_CORRECTIONS_MENS = getattr(profile, "CLUB_CORRECTIONS_MENS", CLUB_CORRECTIONS_MENS)
+        MENS_LEAGUE_NAME = getattr(profile, "MENS_LEAGUE_NAME", MENS_LEAGUE_NAME)
+        WOMENS_LEAGUE_NAME = getattr(profile, "WOMENS_LEAGUE_NAME", WOMENS_LEAGUE_NAME)
+        CONTACT_EMAIL = getattr(profile, "CONTACT_EMAIL", CONTACT_EMAIL)
+    except ImportError as e:
+        print(f"Warning: Could not load profile '{PROFILE_NAME}': {e}")
+
 
 def get_merge_keys() -> list:
     """Return the standard merge keys for combining half-split data."""
